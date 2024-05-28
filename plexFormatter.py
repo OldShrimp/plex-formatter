@@ -46,7 +46,7 @@ def removeSymbols(string):
     return newStr
 
 def isTag(word):
-    tags = ["1080", "1080p", "720", "720p", "brrip", "webrip", "hdtv", "amzn"]
+    tags = ["1080", "1080p", "720", "720p", "brrip", "webrip", "hdtv", "amzn", "x264"]
     if word.lower() in tags:
         return True
     return False
@@ -90,7 +90,7 @@ def formatShowTitle(vid):
             season = word
         elif word_lowercase[0] == 'e' and word_lowercase[1].isdigit() and word_lowercase[2].isdigit():
             episode = word
-        elif isTag(word_lowercase) and first_tag == "":
+        elif first_tag == "" and isTag(word_lowercase):
             first_tag = word
    
     show = " ".join(vid[:vid.index(season)]).title()
@@ -142,8 +142,8 @@ def createPlexPath(srcPath, destPath):
     return ""
 
 parser = argparse.ArgumentParser("Copy video files from one directory to another and format them for use in Plex.")
-parser.add_argument("src", default="~/Downloads", nargs='?')
-parser.add_argument("dest", default="~/Videos", nargs='?')
+parser.add_argument("src", default=os.path.join("~", "Downloads"), nargs='?')
+parser.add_argument("dest", default=os.path.join("~", "Videos"), nargs='?')
 args = parser.parse_args()
 
 def main(args):
