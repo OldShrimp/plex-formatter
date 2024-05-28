@@ -1,9 +1,5 @@
 import os, shutil
 import argparse
-# arguments: source and destination folders. source defaults to ~/Downloads destination defaults to ~/Videos 
-# check to see if destination/Movies and destination/Shows exist, make if not
-# recursively check folders for movie files. split filenames on . then check last for extension
-# 
 
 def findVideos(filePath):
     videos = []
@@ -37,13 +33,6 @@ def isVideo(filename):
     if ext.lower() in video_extensions:
         return True
     return False
-
-def removeSymbols(string):
-    newStr = ""
-    for ch in string:
-        if ch.isalnum():
-            newStr += ch
-    return newStr
 
 def isTag(word):
     tags = ["4k", "2160", "2160p", "1080", "1080p", "720", "720p", "brrip", "webrip", "hdtv", 
@@ -141,10 +130,12 @@ def createPlexPath(srcPath, destPath):
         return createMoviePath(destPath, filename + '.' + file[1])
     return ""
 
-parser = argparse.ArgumentParser("Copy video files from one directory to another and format them for use in Plex.")
-parser.add_argument("src", default=os.path.join("~", "Downloads"), nargs='?', help="Source directory or file to be copied. Defaults to User/Downloads.")
-parser.add_argument("dest", default=os.path.join("~", "Videos"), nargs='?', help="Destination folder for formatted copies of any video files in src. Defaults to User/Videos.")
-args = parser.parse_args()
+def removeSymbols(string):
+    newStr = ""
+    for ch in string:
+        if ch.isalnum():
+            newStr += ch
+    return newStr
 
 def main(args):
     src = os.path.expanduser(args.src)
@@ -158,4 +149,8 @@ def main(args):
         else:
             copyFile(vid, output_path)
 
+parser = argparse.ArgumentParser("Copy video files from one directory to another and format them for use in Plex.")
+parser.add_argument("src", default=os.path.join("~", "Downloads"), nargs='?', help="Source directory or file to be copied. Defaults to User/Downloads.")
+parser.add_argument("dest", default=os.path.join("~", "Videos"), nargs='?', help="Destination folder for formatted copies of any video files in src. Defaults to User/Videos.")
+args = parser.parse_args()
 main(args)
