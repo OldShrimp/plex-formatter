@@ -84,15 +84,22 @@ def formatMovieTitle(vid):
 def formatShowTitle(vid):
     season = ""
     episode = ""
+    first_tag = ""
     for word in vid:
         word_lowercase = word.lower()
         if word_lowercase[0] == 's' and word_lowercase[1].isdigit() and word_lowercase[2].isdigit():
             season = word
         elif word_lowercase[0] == 'e' and word_lowercase[1].isdigit() and word_lowercase[2].isdigit():
             episode = word
+        elif first_tag != "" and isTag(word):
+            first_tag = word
    
     show = " ".join(vid[:vid.index(season)]).title()
-    episode_name = " ".join(vid[vid.index(episode)+1:]).title()
+    episode_name = ""
+    if (first_tag == ""):
+        episode_name = " ".join(vid[vid.index(episode)+1:]).title()
+    else:
+        episode_name = " ".join(vid[vid.index(episode)+1:vid.index(first_tag)]).title()
     return show + " - " + season.lower() + episode.lower() + " - " + episode_name
 
 def createMoviePath(dest, file):
@@ -135,8 +142,8 @@ def createPlexPath(srcPath, destPath):
     return ""
 
 parser = argparse.ArgumentParser("Copy video files from one directory to another and format them for use in Plex.")
-parser.add_argument("src", default=os.path.join("~", "Downloads"), nargs='?')
-parser.add_argument("dest", default=os.path.join("~", "Videos"), nargs='?')
+parser.add_argument("src", default=os.path.join("~", "Downloads"), nargs='?', help="Source directory or file to be copied. Defaults to User/Downloads.")
+parser.add_argument("dest", default=os.path.join("~", "Videos"), nargs='?', help="Destination folder for formatted copies of any video files in src. Defaults to User/Videos.")
 args = parser.parse_args()
 
 def main(args):
