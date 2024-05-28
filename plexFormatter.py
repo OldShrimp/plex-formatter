@@ -33,13 +33,10 @@ def splitExtension(filename):
 
 def isVideo(filename):
     ext = filename.split('.')[-1]
-    match ext:
-        case "mp4":
-            return True
-        case "mkv":
-            return True
-        case _: 
-            return False
+    video_extensions = ["mp4", "mkv"]
+    if ext in video_extensions:
+        return True
+    return False
 
 def removeSymbols(string):
     newStr = ""
@@ -49,25 +46,10 @@ def removeSymbols(string):
     return newStr
 
 def isTag(word):
-    match word.lower():
-        case "1080":
-            return True
-        case "1080p":
-            return True
-        case "720":
-            return True
-        case "720p":
-            return True
-        case "brrip":
-            return True
-        case "webrip":
-            return True
-        case "hdtv":
-            return True
-        case "amzn":
-            return True
-        case _:
-            return False
+    tags = ["1080", "1080p", "720", "720p", "brrip", "webrip", "hdtv", "amzn"]
+    if word.lower() in tags:
+        return True
+    return False
 
 def isMovie(split_filename):
     for word in split_filename:
