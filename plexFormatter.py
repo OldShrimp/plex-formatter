@@ -33,8 +33,8 @@ def splitExtension(filename):
 
 def isVideo(filename):
     ext = filename.split('.')[-1]
-    video_extensions = ["mp4", "mkv"]
-    if ext in video_extensions:
+    video_extensions = ["mp4", "mkv", "wmv", "avi", "mov", "avchd", "flv", "f4v", "swf"]
+    if ext.lower() in video_extensions:
         return True
     return False
 
