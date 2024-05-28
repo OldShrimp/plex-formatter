@@ -15,7 +15,7 @@ def _findVideos(filePath, videos):
             videos.append(filePath)
     elif os.path.isdir(filePath):
         for file in os.listdir(filePath):
-            _findVideos(filePath + "/" + file, videos)
+            _findVideos(os.path.join(filePath, file), videos)
 
 def findDivider(filename):
     divider = ' '
