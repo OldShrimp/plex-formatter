@@ -46,7 +46,8 @@ def removeSymbols(string):
     return newStr
 
 def isTag(word):
-    tags = ["1080", "1080p", "720", "720p", "brrip", "webrip", "hdtv", "amzn", "x264"]
+    tags = ["4k", "2160", "2160p", "1080", "1080p", "720", "720p", "brrip", "webrip", "hdtv", 
+            "amzn", "x264", "h264", "hevc", "h", "264", "265", "h265", "av1"]
     if word.lower() in tags:
         return True
     return False
@@ -83,23 +84,15 @@ def formatMovieTitle(vid):
 def formatShowTitle(vid):
     season = ""
     episode = ""
-    first_tag = ""
     for word in vid:
         word_lowercase = word.lower()
         if word_lowercase[0] == 's' and word_lowercase[1].isdigit() and word_lowercase[2].isdigit():
             season = word
         elif word_lowercase[0] == 'e' and word_lowercase[1].isdigit() and word_lowercase[2].isdigit():
             episode = word
-        elif first_tag == "" and isTag(word_lowercase):
-            first_tag = word
    
     show = " ".join(vid[:vid.index(season)]).title()
-    episode_name = ""
-    if (first_tag == ""):
-        episode_name = " ".join(vid[vid.index(episode):]).title()
-    else:
-        episode_name = " ".join(vid[vid.index(episode)+1:vid.index(first_tag)]).title()
-    
+    episode_name = " ".join(vid[vid.index(episode)+1:]).title()
     return show + " - " + season.lower() + episode.lower() + " - " + episode_name
 
 def createMoviePath(dest, file):
@@ -130,7 +123,7 @@ def createPlexPath(srcPath, destPath):
     filename_cleaned = []
     for word in filename_split:
         word_cleaned = removeSymbols(word)
-        if word_cleaned != "":
+        if word_cleaned != "" and not isTag(word_cleaned):
             filename_cleaned.append(word_cleaned)
 
     if isShow(filename_cleaned):
