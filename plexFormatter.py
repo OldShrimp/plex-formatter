@@ -35,8 +35,8 @@ def isVideo(filename):
     return False
 
 def isTag(word):
-    tags = ["4k", "2160", "2160p", "1080", "1080p", "720", "720p", "brrip", "webrip", "hdtv", 
-            "amzn", "x264", "h264", "hevc", "h", "264", "265", "h265", "av1"]
+    tags = ["4k", "2160", "2160p", "1080", "1080p", "720", "720p", "brrip", "web", "webrip", "hdtv", 
+            "amzn", "nf", "x264", "h264", "hevc", "h", "264", "265", "h265", "av1"]
     if word.lower() in tags:
         return True
     return False
@@ -51,11 +51,11 @@ def isShow(split_filename):
     season_found = False
     episode_found = False
     for word in split_filename:
-        if len(word) == 3:
+        if len(word) == 3 or len(word) == 6:
             word_lowercase = word.lower()
             if word_lowercase[0] == 's' and word_lowercase[1].isdigit() and word_lowercase[2].isdigit():
                 season_found = True
-            if word_lowercase[0] == 'e' and word_lowercase[1].isdigit() and word_lowercase[2].isdigit():
+            if word_lowercase[-3] == 'e' and word_lowercase[-2].isdigit() and word_lowercase[-1].isdigit():
                 episode_found = True
             if season_found and episode_found:
                 return True
@@ -71,25 +71,30 @@ def formatMovieTitle(vid):
     return title + " (" + year + ")"
 
 def formatShowTitle(vid):
-    season = ""
-    episode = ""
-    first_tag = ""
+    season_index = -1
+    episode_index = -1
+    first_tag_index = -1
     for word in vid:
         word_lowercase = word.lower()
-        if word_lowercase[0] == 's' and word_lowercase[1].isdigit() and word_lowercase[2].isdigit():
-            season = word
-        elif word_lowercase[0] == 'e' and word_lowercase[1].isdigit() and word_lowercase[2].isdigit():
-            episode = word
-        elif first_tag != "" and isTag(word):
-            first_tag = word
-   
-    show = " ".join(vid[:vid.index(season)]).title()
-    episode_name = ""
-    if (first_tag == ""):
-        episode_name = " ".join(vid[vid.index(episode)+1:]).title()
+        if len(word) > 2 and word_lowercase[0] == 's' and word_lowercase[1].isdigit() and word_lowercase[2].isdigit():
+            season_index = vid.index(word)
+        elif len(word) > 2 and word_lowercase[len(word)-3] == 'e' and word_lowercase[len(word)-2].isdigit() and word_lowercase[len(word)-1].isdigit():
+            episode_index_index = vid.index(word)
+        elif isTag(word):
+            first_tag_index = vid.index(word)
+            break
+
+    show = " ".join(vid[:season_index]).title()
+    if len(vid[season_index]) == 6:
+        episode_index = season_index
+        show += " - " + vid[season_index].lower() + " - "
     else:
-        episode_name = " ".join(vid[vid.index(episode)+1:vid.index(first_tag)]).title()
-    return show + " - " + season.lower() + episode.lower() + " - " + episode_name
+        show += " - " + vid[season_index].lower() + vid[episode_index].lower() + " - "
+    if (first_tag_index == -1):
+        show += " ".join(vid[episode_index+1:]).title()
+    else:
+        show += " ".join(vid[episode_index+1:first_tag_index]).title()
+    return show
 
 def createMoviePath(dest, file):
     return os.path.join(dest, "Movies", splitExtension(file)[0], file)
@@ -119,7 +124,7 @@ def createPlexPath(srcPath, destPath):
     filename_cleaned = []
     for word in filename_split:
         word_cleaned = removeSymbols(word)
-        if word_cleaned != "" and not isTag(word_cleaned):
+        if word_cleaned != "":
             filename_cleaned.append(word_cleaned)
 
     if isShow(filename_cleaned):
@@ -137,6 +142,18 @@ def removeSymbols(string):
             newStr += ch
     return newStr
 
+def processPath(src, dest):
+    video_paths = findVideos(src)
+
+    for vid in video_paths:
+        output_path = createPlexPath(vid, dest)
+        if output_path == "":
+            print("could not process " + vid)
+        else:
+            print("processing " + vid)
+            copyFile(vid, output_path)
+            print("completed " + output_path)
+
 def main(args):
     src = os.path.expanduser(args.src)
     dest = os.path.expanduser(args.dest)
@@ -153,4 +170,4 @@ parser = argparse.ArgumentParser("Copy video files from one directory to another
 parser.add_argument("src", default=os.path.join("~", "Downloads"), nargs='?', help="Source directory or file to be copied. Defaults to User/Downloads.")
 parser.add_argument("dest", default=os.path.join("~", "Videos"), nargs='?', help="Destination folder for formatted copies of any video files in src. Defaults to User/Videos.")
 args = parser.parse_args()
-main(args)
+#main(args)
