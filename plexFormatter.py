@@ -166,8 +166,9 @@ def main(args):
         else:
             copyFile(vid, output_path)
 
-parser = argparse.ArgumentParser("Copy video files from one directory to another and format them for use in Plex.")
-parser.add_argument("src", default=os.path.join("~", "Downloads"), nargs='?', help="Source directory or file to be copied. Defaults to User/Downloads.")
-parser.add_argument("dest", default=os.path.join("~", "Videos"), nargs='?', help="Destination folder for formatted copies of any video files in src. Defaults to User/Videos.")
-args = parser.parse_args()
-#main(args)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser("Copy video files from one directory to another and format them for use in Plex.")
+    parser.add_argument("src", default=os.path.join("~", "Downloads"), nargs='?', help="Source directory or file to be copied. Defaults to User/Downloads.")
+    parser.add_argument("dest", default=os.path.join("~", "Videos"), nargs='?', help="Destination folder for formatted copies of any video files in src. Defaults to User/Videos.")
+    args = parser.parse_args()
+    main(args)
