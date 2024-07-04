@@ -157,14 +157,7 @@ def processPath(src, dest):
 def main(args):
     src = os.path.expanduser(args.src)
     dest = os.path.expanduser(args.dest)
-    video_paths = findVideos(src)
-
-    for vid in video_paths:
-        output_path = createPlexPath(vid, dest)
-        if output_path == "":
-            print("could not process " + vid)
-        else:
-            copyFile(vid, output_path)
+    processPath(src, dest)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("Copy video files from one directory to another and format them for use in Plex.")
