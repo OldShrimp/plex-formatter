@@ -161,6 +161,8 @@ def loadConfig():
     with open(FormatterConfig.configPath) as config:
         while True:
             line = config.readline()
+            if len(line) == 0:
+                break
             if line[0] == "\n" or line[0] == "\n":
                 continue
 
@@ -188,7 +190,6 @@ class FormatterConfig:
         self.copy = options["tags"]
         self.extensions = options["extensions"]
     configPath = os.path.expanduser(os.path.join("~", ".config", "plexFormatter", "plexFormatter.conf"))
-
 
 def main(args):
     src = os.path.expanduser(args.src)
