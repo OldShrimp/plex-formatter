@@ -28,16 +28,12 @@ def splitExtension(filename):
     return [filename[:-(len(extension) + 1)], extension]
 
 def isVideo(filename):
-    ext = filename.split('.')[-1]
-    video_extensions = ["mp4", "mkv", "wmv", "avi", "mov", "avchd", "flv", "f4v", "swf"]
-    if ext.lower() in video_extensions:
+    if splitExtension(filename)[1].lower() in config.extensions:
         return True
     return False
 
 def isTag(word):
-    tags = ["4k", "2160", "2160p", "1080", "1080p", "720", "720p", "brrip", "web", "webrip", "hdtv", 
-            "amzn", "nf", "x264", "h264", "hevc", "h", "264", "265", "h265", "av1"]
-    if word.lower() in tags:
+    if word.lower() in config.tags:
         return True
     return False
 
@@ -153,14 +149,56 @@ def processPath(src, dest):
             copyFile(vid, output_path)
             print("completed " + output_path)
 
+def generateDefaultConfig():
+    ensurePath(os.path.split(FormatterConfig.configPath)[-1])
+    with open(FormatterConfig.configPath, mode="w") as conf:
+        conf.write("# config for Plex Formatter\n\nSRC=~/Downloads\nDEST=~/Videos\n\n# copy if true, move if false\nCOPY=1\n\n# any tags to be cut out of\nthe file name\nTAGS=4k,2160,2160p,1080,1080p,720,720p,brrip,webrip,hdtv,amzn,x264,h264,hevc,h,264,265,h265,av1\n\n# acceptable file extensions\nEXTENSIONS=mp4,mkv,wmv,avi,mov,avchd,flv,f4v,swf")
+
+def loadConfig():
+    options = {}
+    if not os.path.exists(FormatterConfig.configPath):
+        generateDefaultConfig()
+    with open(FormatterConfig.configPath) as config:
+        while True:
+            line = config.readline()
+            if line[0] == "\n" or line[0] == "\n":
+                continue
+
+            splitLine = line.removesuffix("\n").split("=")
+            match splitLine[0]:
+                case "SRC":
+                    options["src"] = splitLine[1]
+                case "DEST":
+                    options["dest"] = splitLine[1]
+                case "COPY":
+                    options["copy"] = splitLine[1]
+                case "TAGS":
+                    options["tags"] = splitLine[1].split(",")
+                case "EXTENSIONS":
+                    options["extensions"] = splitLine[1].split(",")
+            if line[-1] != "\n":
+                break
+    return options
+
+class FormatterConfig:
+    def __init__(self):
+        options = loadConfig()
+        self.src = os.path.expanduser(options["src"])
+        self.dest = os.path.expanduser(options["dest"])
+        self.copy = options["tags"]
+        self.extensions = options["extensions"]
+    configPath = os.path.expanduser(os.path.join("~", ".config", "plexFormatter", "plexFormatter.conf"))
+
+
 def main(args):
     src = os.path.expanduser(args.src)
     dest = os.path.expanduser(args.dest)
     processPath(src, dest)
 
+config = FormatterConfig()
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("Copy video files from one directory to another and format them for use in Plex.")
-    parser.add_argument("src", default=os.path.join("~", "Downloads"), nargs='?', help="Source directory or file to be copied. Defaults to User/Downloads.")
-    parser.add_argument("dest", default=os.path.join("~", "Videos"), nargs='?', help="Destination folder for formatted copies of any video files in src. Defaults to User/Videos.")
+    parser.add_argument("src", default=config.src, nargs='?', help="Source directory or file to be copied. Defaults to User/Downloads.")
+    parser.add_argument("dest", default=config.dest, nargs='?', help="Destination folder for formatted copies of any video files in src. Defaults to User/Videos.")
     args = parser.parse_args()
     main(args)
