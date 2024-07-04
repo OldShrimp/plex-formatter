@@ -43,7 +43,7 @@ def isTag(word):
 
 def isMovie(split_filename):
     for word in split_filename:
-        if len(word) == 4 and word.isdigit() and word > "1900" and word < "2100":
+        if len(word) == 4 and word.isdigit() and not isTag(word):
             return True
     return False
 
@@ -64,7 +64,7 @@ def isShow(split_filename):
 def formatMovieTitle(vid):
     year = ""
     for word in vid:
-        if len(word) == 4 and word.isdigit() and word > "1900" and word < "2100":
+        if len(word) == 4 and word.isdigit() and not isTag(word):
             year = word
     title = " ".join(vid[:vid.index(year)]).title()
 
@@ -110,7 +110,6 @@ def copyFile(vidSrc, dest):
     if os.path.exists(dest):
         print(dest + " already exists")
     else:
-        print("copying " + vidSrc + " to " + dest)
         shutil.copy(vidSrc, dest)
 
 def ensurePath(filePath):
