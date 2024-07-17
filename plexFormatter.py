@@ -161,7 +161,7 @@ def processPath(src, dest, move=False):
 def generateDefaultConfig():
     ensurePath(os.path.split(FormatterConfig.configPath)[-1])
     with open(FormatterConfig.configPath, mode="w") as conf:
-        conf.write("# config for Plex Formatter\n\nSRC=~/Downloads\nDEST=~/Videos\n\n# copy if true, move if false\nCOPY=1\n\n# any tags to be cut out of\nthe file name\nTAGS=4k,2160,2160p,1080,1080p,720,720p,brrip,webrip,hdtv,amzn,x264,h264,hevc,h,264,265,h265,av1\n\n# acceptable file extensions\nEXTENSIONS=mp4,mkv,wmv,avi,mov,avchd,flv,f4v,swf")
+        conf.write("# config for Plex Formatter daemon\n\n# source directories for unformatted files, separated by commas\nCOPYSRC=~/Downloads\nMOVESRC=\n\n# destination directory for formatted files\nDEST=~/Videos\n\n# any tags to be cut out of the file name\nTAGS=4k,2160,2160p,1080,1080p,720,720p,brrip,webrip,hdtv,amzn,x264,h264,hevc,h,264,265,h265,av1,bluray\n\n# acceptable file extensions\nEXTENSIONS=mp4,mkv,wmv,avi,mov,avchd,flv,f4v,swf")
 
 def loadConfig():
     options = {}
@@ -169,24 +169,15 @@ def loadConfig():
         generateDefaultConfig()
     with open(FormatterConfig.configPath) as config:
         while True:
-            line = config.readline()
+            line = config.readline().lstrip('\t ')
             if len(line) == 0:
                 break
             if line[0] == "\n" or line[0] == "#":
                 continue
 
             splitLine = line.removesuffix("\n").split("=")
-            match splitLine[0]:
-                case "SRC":
-                    options["src"] = splitLine[1]
-                case "DEST":
-                    options["dest"] = splitLine[1]
-                case "COPY":
-                    options["copy"] = splitLine[1]
-                case "TAGS":
-                    options["tags"] = splitLine[1].split(",")
-                case "EXTENSIONS":
-                    options["extensions"] = splitLine[1].split(",")
+            if len(splitLine) == 2:
+                options[splitLine[0]] = splitLine[1].split(",")
             if line[-1] != "\n":
                 break
     return options
@@ -194,28 +185,44 @@ def loadConfig():
 class FormatterConfig:
     def __init__(self):
         options = loadConfig()
-        self.src = os.path.expanduser(options.get("src"))
-        self.dest = os.path.expanduser(options.get("dest"))
-        self.copy = options.get("copy")
+        self.copysrc = options.get("copysrc")
+        if self.copysrc:
+            self.copysrc = os.path.expanduser(self.copysrc)
+        self.movesrc = options.get("movesrc")
+        if self.movesrc:
+            self.movesrc = os.path.expanduser(self.movesrc)
+        self.dest = options.get("dest")
+        if self.dest:
+            self.dest = os.path.expanduser(self.dest)
         self.tags = options.get("tags")
         self.extensions = options.get("extensions")
     configPath = os.path.expanduser(os.path.join("~", ".config", "plexFormatter", "plexFormatter.conf"))
+    pidPath = os.path.join("~", ".config", "plexFormatter", "plexFormatter.conf")
 
 def main(args):
-    if (args.move):
-        processPath(args.move[0], args.move[1], move=True)
-    if (args.copy):
-        processPath(args.copy[0], args.copy[1])
-    if (args.daemon):
-        pass
     parser.print_help()
     print(args)
+    if (args.copy):
+        processPath(args.copy[0], args.copy[1])
+    if (args.move):
+        processPath(args.move[0], args.move[1], move=True)
+    if (args.daemon):
+        match args.daemon:
+            case "start":
+                pass
+            case "stop":
+                pass
+            case "restart":
+                pass
+            case "config":
+                os.system("nano " + config.configPath)
+
 
 config = FormatterConfig()
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Copy video files from one directory to another and format them for use in Plex.")
-    parser.add_argument("--move", "-m", nargs=2, metavar=("[source]", "[destination]"), help="Format and move files from source to destination. source can be a file or directory")
-    parser.add_argument("--copy", "-c", nargs=2, metavar=("[source]", "[destination]"), help="Format and copy files from source to destination. source can be a file or directory")
-    parser.add_argument("--daemon", "-d", nargs=1, choices=["start", "stop", "restart", "config"], help="Run as a daemon, using the configuration provided")
-    args = parser.parse_args()
+    parser.add_argument("--move", "-m", nargs=2, metavar=("[source]", "[destination]"), help="Format and move files from source to destination. Source can be a file or directory")
+    parser.add_argument("--copy", "-c", nargs=2, metavar=("[source]", "[destination]"), help="Format and copy files from source to destination. Source can be a file or directory")
+    parser.add_argument("--daemon", "-d", choices=["start", "stop", "restart", "config"], help="Run as a daemon, using the configuration provided")
+    args = parser.parse_args("-d config".split())
     main(args)
