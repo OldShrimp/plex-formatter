@@ -108,6 +108,13 @@ def copyFile(vidSrc, dest):
     else:
         shutil.copy(vidSrc, dest)
 
+def moveFile(vidSrc, dest):
+    ensurePath(os.path.split(dest)[0])
+    if os.path.exists(dest):
+        print(dest + " already exists")
+    else:
+        shutil.move(vidSrc, dest)
+
 def ensurePath(filePath):
     if not os.path.exists(filePath):
         ensurePath(os.path.split(filePath)[0])
@@ -137,16 +144,18 @@ def removeSymbols(string):
             newStr += ch
     return newStr
 
-def processPath(src, dest):
+def processPath(src, dest, move=False):
     video_paths = findVideos(src)
-
+    relocate = copyFile
+    if(move):
+        relocate = moveFile
     for vid in video_paths:
         output_path = createPlexPath(vid, dest)
         if output_path == "":
             print("could not process " + vid)
         else:
             print("processing " + vid)
-            copyFile(vid, output_path)
+            relocate(vid, output_path)
             print("completed " + output_path)
 
 def generateDefaultConfig():
@@ -163,7 +172,7 @@ def loadConfig():
             line = config.readline()
             if len(line) == 0:
                 break
-            if line[0] == "\n" or line[0] == "\n":
+            if line[0] == "\n" or line[0] == "#":
                 continue
 
             splitLine = line.removesuffix("\n").split("=")
@@ -185,21 +194,28 @@ def loadConfig():
 class FormatterConfig:
     def __init__(self):
         options = loadConfig()
-        self.src = os.path.expanduser(options["src"])
-        self.dest = os.path.expanduser(options["dest"])
-        self.copy = options["tags"]
-        self.extensions = options["extensions"]
+        self.src = os.path.expanduser(options.get("src"))
+        self.dest = os.path.expanduser(options.get("dest"))
+        self.copy = options.get("copy")
+        self.tags = options.get("tags")
+        self.extensions = options.get("extensions")
     configPath = os.path.expanduser(os.path.join("~", ".config", "plexFormatter", "plexFormatter.conf"))
 
 def main(args):
-    src = os.path.expanduser(args.src)
-    dest = os.path.expanduser(args.dest)
-    processPath(src, dest)
+    if (args.move):
+        processPath(args.move[0], args.move[1], move=True)
+    if (args.copy):
+        processPath(args.copy[0], args.copy[1])
+    if (args.daemon):
+        pass
+    parser.print_help()
+    print(args)
 
 config = FormatterConfig()
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser("Copy video files from one directory to another and format them for use in Plex.")
-    parser.add_argument("src", default=config.src, nargs='?', help="Source directory or file to be copied. Defaults to User/Downloads.")
-    parser.add_argument("dest", default=config.dest, nargs='?', help="Destination folder for formatted copies of any video files in src. Defaults to User/Videos.")
+    parser = argparse.ArgumentParser(description="Copy video files from one directory to another and format them for use in Plex.")
+    parser.add_argument("--move", "-m", nargs=2, metavar=("[source]", "[destination]"), help="Format and move files from source to destination. source can be a file or directory")
+    parser.add_argument("--copy", "-c", nargs=2, metavar=("[source]", "[destination]"), help="Format and copy files from source to destination. source can be a file or directory")
+    parser.add_argument("--daemon", "-d", nargs=1, choices=["start", "stop", "restart", "config"], help="Run as a daemon, using the configuration provided")
     args = parser.parse_args()
     main(args)
