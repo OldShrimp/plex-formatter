@@ -177,7 +177,7 @@ def loadConfig():
 
             splitLine = line.removesuffix("\n").split("=")
             if len(splitLine) == 2:
-                options[splitLine[0]] = splitLine[1].split(",")
+                options[splitLine[0].lower()] = splitLine[1].split(",")
             if line[-1] != "\n":
                 break
     return options
@@ -185,15 +185,22 @@ def loadConfig():
 class FormatterConfig:
     def __init__(self):
         options = loadConfig()
+        print(options)
         self.copysrc = options.get("copysrc")
         if self.copysrc:
-            self.copysrc = os.path.expanduser(self.copysrc)
+            for src in self.copysrc:
+                src = os.path.expanduser(src)
+        else:
+            self.copysrc = []
         self.movesrc = options.get("movesrc")
         if self.movesrc:
-            self.movesrc = os.path.expanduser(self.movesrc)
+            for src in self.movesrc:
+                src = os.path.expanduser(src)
+        else:
+            self.movesrc = []
         self.dest = options.get("dest")
         if self.dest:
-            self.dest = os.path.expanduser(self.dest)
+            self.dest = os.path.expanduser(self.dest[0])
         self.tags = options.get("tags")
         self.extensions = options.get("extensions")
     configPath = os.path.expanduser(os.path.join("~", ".config", "plexFormatter", "plexFormatter.conf"))
