@@ -106,7 +106,7 @@ def copyFile(vidSrc, dest):
     if os.path.exists(dest):
         print(dest + " already exists")
     else:
-        shutil.copy(vidSrc, dest)
+        shutil.copyfile(vidSrc, dest)
 
 def moveFile(vidSrc, dest):
     ensurePath(os.path.split(dest)[0])
