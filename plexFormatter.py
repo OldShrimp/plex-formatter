@@ -1,20 +1,24 @@
-import os, shutil
+import os, shutil, logging
 import argparse
+from logging.handlers import RotatingFileHandler
 
 def findVideos(filePath):
     videos = []
     if os.path.exists(filePath):
         _findVideos(filePath, videos)
+        logger.info(findVideos.__name__ + ": " + filePath +" complete\n")
     else:
-        print("error: " + filePath + " not a valid path.")
+        logger.warning(findVideos.__name__ + ": " + filePath + " not a valid path.")
     return videos
 
 def _findVideos(filePath, videos):
     if os.path.isfile(filePath):
         if isVideo(os.path.split(filePath)[-1]):
+            logger.info("video file found at " + filePath)
             videos.append(filePath)
     elif os.path.isdir(filePath):
         for file in os.listdir(filePath):
+            #logger.debug("searching directory " + filePath)
             _findVideos(os.path.join(filePath, file), videos)
 
 def findDivider(filename):
@@ -104,16 +108,18 @@ def createShowPath(dest, file):
 def copyFile(vidSrc, dest):
     ensurePath(os.path.split(dest)[0])
     if os.path.exists(dest):
-        print(dest + " already exists")
+        logger.info(dest + " already exists")
     else:
         shutil.copyfile(vidSrc, dest)
+        logger.info("completed " + dest)
 
 def moveFile(vidSrc, dest):
     ensurePath(os.path.split(dest)[0])
     if os.path.exists(dest):
-        print(dest + " already exists")
+        logger.info(dest + " already exists")
     else:
         shutil.move(vidSrc, dest)
+        logger.info("completed " + dest)
 
 def ensurePath(filePath):
     if not os.path.exists(filePath):
@@ -152,16 +158,15 @@ def processPath(src, dest, move=False):
     for vid in video_paths:
         output_path = createPlexPath(vid, dest)
         if output_path == "":
-            print("could not process " + vid)
+            logger.warning("could not process " + vid)
         else:
-            print("processing " + vid)
+            logger.info("processing " + vid)
             relocate(vid, output_path)
-            print("completed " + output_path)
 
 def generateDefaultConfig():
     ensurePath(os.path.split(FormatterConfig.configPath)[-1])
     with open(FormatterConfig.configPath, mode="w") as conf:
-        conf.write("# config for Plex Formatter daemon\n\n# source directories for unformatted files, separated by commas\nCOPYSRC=~/Downloads\nMOVESRC=\n\n# destination directory for formatted files\nDEST=~/Videos\n\n# any tags to be cut out of the file name\nTAGS=4k,2160,2160p,1080,1080p,720,720p,brrip,webrip,hdtv,amzn,x264,h264,hevc,h,264,265,h265,av1,bluray\n\n# acceptable file extensions\nEXTENSIONS=mp4,mkv,wmv,avi,mov,avchd,flv,f4v,swf")
+        conf.write("# config for Plex Formatter daemon\n\n# source directories for unformatted files, separated by commas\nCOPYSRC=~/Downloads\nMOVESRC=\n\n# destination directory for formatted files\nDEST=~/Videos\n\nLOGLEVEL=info\n\n# any tags to be cut out of the file name\nTAGS=4k,2160,2160p,1080,1080p,720,720p,brrip,webrip,hdtv,amzn,x264,h264,hevc,h,264,265,h265,av1,bluray\n\n# acceptable file extensions\nEXTENSIONS=mp4,mkv,wmv,avi,mov,avchd,flv,f4v,swf")
 
 def loadConfig():
     options = {}
@@ -176,7 +181,7 @@ def loadConfig():
                 continue
 
             splitLine = line.removesuffix("\n").split("=")
-            if len(splitLine) == 2:
+            if len(splitLine) >= 2:
                 options[splitLine[0].lower()] = splitLine[1].split(",")
             if line[-1] != "\n":
                 break
@@ -185,7 +190,6 @@ def loadConfig():
 class FormatterConfig:
     def __init__(self):
         options = loadConfig()
-        print(options)
         self.copysrc = options.get("copysrc")
         if self.copysrc:
             for src in self.copysrc:
@@ -201,10 +205,19 @@ class FormatterConfig:
         self.dest = options.get("dest")
         if self.dest:
             self.dest = os.path.expanduser(self.dest[0])
+        match options.get("loglevel")[0]:
+            case "debug":
+                self.loglevel = logging.DEBUG
+            case "info":
+                self.loglevel = logging.INFO
+            case _:
+                self.loglevel = logging.WARNING
+
         self.tags = options.get("tags")
         self.extensions = options.get("extensions")
     configPath = os.path.expanduser(os.path.join("~", ".config", "plexFormatter", "plexFormatter.conf"))
-    pidPath = os.path.join("~", ".config", "plexFormatter", "plexFormatter.conf")
+    #pidPath = os.path.join("/var", "run", "plexFormatter", "plexFormatter.pid")
+    logPath = os.path.expanduser(os.path.join("~", ".log", "plexFormatter", "plexFormatter.log"))
 
 def main(args):
     parser.print_help()
@@ -226,10 +239,20 @@ def main(args):
 
 
 config = FormatterConfig()
+# set up the logger
+ensurePath(os.path.split(config.logPath)[0])
+logging.basicConfig(format="%(asctime)s %(levelname)s:%(message)s", level=config.loglevel)
+logger = logging.getLogger(__name__)
+handler = RotatingFileHandler(config.logPath, maxBytes=1000000, backupCount=5)
+handler.setFormatter(logging.Formatter(fmt="%(asctime)s %(levelname)s:%(message)s"))
+
+logger.addHandler(handler)
+logger.info("Plex Formatter initialized\n\n")
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Copy video files from one directory to another and format them for use in Plex.")
     parser.add_argument("--move", "-m", nargs=2, metavar=("[source]", "[destination]"), help="Format and move files from source to destination. Source can be a file or directory")
     parser.add_argument("--copy", "-c", nargs=2, metavar=("[source]", "[destination]"), help="Format and copy files from source to destination. Source can be a file or directory")
     parser.add_argument("--daemon", "-d", choices=["start", "stop", "restart", "config"], help="Run as a daemon, using the configuration provided")
-    args = parser.parse_args("-d config".split())
+    args = parser.parse_args()
     main(args)

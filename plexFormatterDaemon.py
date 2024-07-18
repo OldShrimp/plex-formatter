@@ -1,4 +1,5 @@
 import logging
+from logging.handlers import RotatingFileHandler
 import daemon
 import os
 from watchdog.events import FileSystemEventHandler
