@@ -1,6 +1,9 @@
 import os, shutil, logging
 import argparse
 from logging.handlers import RotatingFileHandler
+from watchdog.events import FileSystemEventHandler
+from watchdog.observers import Observer
+from time import sleep
 
 def findVideos(filePath):
     videos = []
@@ -220,8 +223,6 @@ class FormatterConfig:
     logPath = os.path.expanduser(os.path.join("~", ".log", "plexFormatter", "plexFormatter.log"))
 
 def main(args):
-    parser.print_help()
-    print(args)
     if (args.copy):
         processPath(args.copy[0], args.copy[1])
     if (args.move):
@@ -229,7 +230,7 @@ def main(args):
     if (args.daemon):
         match args.daemon:
             case "start":
-                pass
+                daemonLoop()
             case "stop":
                 pass
             case "restart":
@@ -237,11 +238,42 @@ def main(args):
             case "config":
                 os.system("nano " + config.configPath)
 
+def daemonLoop():
+    class CopyHandler(FileSystemEventHandler):
+        def on_created(self, event):
+            plexFormatter.processPath(event.src_path, plexFormatter.config.dest)
+    class MoveHandler(FileSystemEventHandler):
+        def on_created(self, event):
+            plexFormatter.processPath(event.src_path, plexFormatter.config.dest, move=True)
+
+    # Create observer and event handlers
+    observer = Observer()
+    copy_handler = CopyHandler()
+    move_handler = MoveHandler()
+
+    # Set up observer to watch specified directories and do initial scan
+    for path in plexFormatter.config.copysrc:
+        logger.info("Now observing " + path)
+        observer.schedule(copy_handler, path)
+        plexFormatter.processPath(path, plexFormatter.config.dest)
+    for path in plexFormatter.config.movesrc:
+        logger.info("Now observing " + path)
+        observer.schedule(move_handler, path)
+        plexFormatter.processPath(path, plexFormatter.config.dest)
+    observer.start()
+    logger.info("Daemon initialized")
+    try:
+        while True:
+            sleep(10)
+    except:
+        observer.stop()
+
+    observer.join()
 
 config = FormatterConfig()
 # set up the logger
 ensurePath(os.path.split(config.logPath)[0])
-logging.basicConfig(format="%(asctime)s %(levelname)s:%(message)s", level=config.loglevel)
+logging.basicConfig(format="%(asctime)s %(levelname)s: %(message)s", level=config.loglevel)
 logger = logging.getLogger(__name__)
 handler = RotatingFileHandler(config.logPath, maxBytes=1000000, backupCount=5)
 handler.setFormatter(logging.Formatter(fmt="%(asctime)s %(levelname)s:%(message)s"))
