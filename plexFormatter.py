@@ -219,10 +219,10 @@ class FormatterConfig:
         self.tags = options.get("tags")
         self.extensions = options.get("extensions")
     configPath = os.path.expanduser(os.path.join("~", ".config", "plexFormatter", "plexFormatter.conf"))
-    #pidPath = os.path.join("/var", "run", "plexFormatter", "plexFormatter.pid")
     logPath = os.path.expanduser(os.path.join("~", ".log", "plexFormatter", "plexFormatter.log"))
 
 def main(args):
+    logger.debug(args)
     if (args.copy):
         processPath(args.copy[0], args.copy[1])
     if (args.move):
@@ -238,36 +238,37 @@ def main(args):
             case "config":
                 os.system("nano " + config.configPath)
 
-def daemonLoop():
-    class CopyHandler(FileSystemEventHandler):
-        def on_created(self, event):
-            plexFormatter.processPath(event.src_path, plexFormatter.config.dest)
-    class MoveHandler(FileSystemEventHandler):
-        def on_created(self, event):
-            plexFormatter.processPath(event.src_path, plexFormatter.config.dest, move=True)
+class CopyHandler(FileSystemEventHandler):
+    def on_created(self, event):
+        processPath(event.src_path, config.dest)
+class MoveHandler(FileSystemEventHandler):
+    def on_created(self, event):
+        processPath(event.src_path, config.dest, move=True)
 
+def daemonLoop():
+    logger.debug("DaemonLoop started")
     # Create observer and event handlers
     observer = Observer()
     copy_handler = CopyHandler()
     move_handler = MoveHandler()
 
     # Set up observer to watch specified directories and do initial scan
-    for path in plexFormatter.config.copysrc:
+    for path in config.copysrc:
         logger.info("Now observing " + path)
         observer.schedule(copy_handler, path)
-        plexFormatter.processPath(path, plexFormatter.config.dest)
-    for path in plexFormatter.config.movesrc:
+        processPath(path, config.dest)
+    for path in config.movesrc:
         logger.info("Now observing " + path)
         observer.schedule(move_handler, path)
-        plexFormatter.processPath(path, plexFormatter.config.dest)
+        processPath(path, config.dest)
     observer.start()
-    logger.info("Daemon initialized")
+    logger.debug("Daemon initialized")
     try:
         while True:
             sleep(10)
     except:
         observer.stop()
-
+    logger.info("Daemon Stopped")
     observer.join()
 
 config = FormatterConfig()
