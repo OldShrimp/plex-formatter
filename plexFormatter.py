@@ -252,6 +252,22 @@ def daemonLoop():
     copy_handler = CopyHandler()
     move_handler = MoveHandler()
 
+    all_paths_valid = False
+    failed_count = 0
+    while not all_paths_valid:
+        all_paths_valid = True
+        all_paths_valid = all_paths_valid and os.path.exists(config.dest)
+        for path in config.copysrc:
+            all_paths_valid = all_paths_valid and os.path.exists(path)
+        for path in config.movesrc:
+            all_paths_valid = all_paths_valid and os.path.exists(path)
+        if not all_paths_valid:
+            failed_count += 1
+            if failed_count > 20:
+                exit(1)
+            logger.warning("could not find all source/destination paths. trying again in 10 seconds")
+            sleep(10)
+
     # Set up observer to watch specified directories and do initial scan
     for path in config.copysrc:
         logger.info("Now observing " + path)
@@ -277,10 +293,10 @@ ensurePath(os.path.split(config.logPath)[0])
 logging.basicConfig(format="%(asctime)s %(levelname)s: %(message)s", level=config.loglevel)
 logger = logging.getLogger(__name__)
 handler = RotatingFileHandler(config.logPath, maxBytes=1000000, backupCount=5)
-handler.setFormatter(logging.Formatter(fmt="%(asctime)s %(levelname)s:%(message)s"))
+handler.setFormatter(logging.Formatter(fmt="%(asctime)s %(levelname)s: %(message)s"))
 
 logger.addHandler(handler)
-logger.info("Plex Formatter initialized\n\n")
+logger.info("\nPlex Formatter initialized\n\n")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Copy video files from one directory to another and format them for use in Plex.")
