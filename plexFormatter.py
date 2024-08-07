@@ -167,7 +167,7 @@ def processPath(src, dest, move=False):
 def generateDefaultConfig():
     ensurePath(os.path.split(FormatterConfig.configPath)[-1])
     with open(FormatterConfig.configPath, mode="w") as conf:
-        conf.write("# config for Plex Formatter daemon\n\n# source directories for unformatted files, separated by commas\nCOPYSRC=~/Downloads\nMOVESRC=\n\n# destination directory for formatted files\nDEST=~/Videos\n\nLOGLEVEL=info\n\n# any tags to be cut out of the file name\nTAGS=4k,2160,2160p,1080,1080p,720,720p,brrip,webrip,hdtv,amzn,x264,h264,hevc,h,264,265,h265,av1,bluray\n\n# acceptable file extensions\nEXTENSIONS=mp4,mkv,wmv,avi,mov,avchd,flv,f4v,swf,srt,smi,ssa,ass,vtt")
+        conf.write("# config for Plex Formatter daemon\n\n# source directories for unformatted files, separated by commas\nCOPYSRC=~/Downloads\nMOVESRC=\n\n# destination directory for formatted files\nDEST=~/Videos\n\nLOGLEVEL=info\n\n# any tags to be cut out of the file name\nTAGS=4k,2160,2160p,1080,1080p,720,720p,brrip,webrip,hdtv,amzn,x264,h264,hevc,h,264,265,h265,av1,bluray\n\n# acceptable file extensions\nEXTENSIONS=mp4,mkv,wmv,avi,mov,avchd,flv,f4v,swf")
 
 def loadConfig():
     options = {}
