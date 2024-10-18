@@ -1,305 +1,220 @@
-import os, shutil, logging
-import argparse
-from logging.handlers import RotatingFileHandler
-from watchdog.events import FileSystemEventHandler
+import os
+import shutil
+import logging
+import time
+import signal
 from watchdog.observers import Observer
-from time import sleep
+from watchdog.events import FileSystemEventHandler
 
-def findVideos(filePath):
-    videos = []
-    if os.path.exists(filePath):
-        _findVideos(filePath, videos)
-    else:
-        logger.warning(findVideos.__name__ + ": " + filePath + " not a valid path.")
-    return videos
-
-def _findVideos(filePath, videos):
-    if os.path.isfile(filePath):
-        if isVideo(os.path.split(filePath)[-1]):
-            logger.info("video file found at " + filePath)
-            videos.append(filePath)
-    elif os.path.isdir(filePath):
-        for file in os.listdir(filePath):
-            _findVideos(os.path.join(filePath, file), videos)
-
-def findDivider(filename):
-    divider = ' '
-    if len(filename.split()) < len(filename.split('.')):
-        divider = '.'
-    return divider
-
-def splitExtension(filename):
-    extension = filename.split('.')[-1]
-    return [filename[:-(len(extension) + 1)], extension]
-
-def isVideo(filename):
-    if splitExtension(filename)[1].lower() in config.extensions:
-        return True
-    return False
-
-def isTag(word):
-    if word.lower() in config.tags:
-        return True
-    return False
-
-def isMovie(split_filename):
-    for word in split_filename:
-        if len(word) == 4 and word.isdigit() and not isTag(word):
-            return True
-    return False
-
-def isShow(split_filename):
-    season_found = False
-    episode_found = False
-    for word in split_filename:
-        if len(word) == 3 or len(word) == 6:
-            word_lowercase = word.lower()
-            if word_lowercase[0] == 's' and word_lowercase[1].isdigit() and word_lowercase[2].isdigit():
-                season_found = True
-            if word_lowercase[-3] == 'e' and word_lowercase[-2].isdigit() and word_lowercase[-1].isdigit():
-                episode_found = True
-            if season_found and episode_found:
-                return True
-    return False
-
-def formatMovieTitle(vid):
-    year = ""
-    for word in vid:
-        if len(word) == 4 and word.isdigit() and not isTag(word):
-            year = word
-    title = " ".join(vid[:vid.index(year)]).title()
-
-    return title + " (" + year + ")"
-
-def formatShowTitle(vid):
-    season_index = -1
-    episode_index = -1
-    first_tag_index = -1
-    for word in vid:
-        word_lowercase = word.lower()
-        if len(word) > 2 and word_lowercase[0] == 's' and word_lowercase[1].isdigit() and word_lowercase[2].isdigit():
-            season_index = vid.index(word)
-        elif len(word) > 2 and word_lowercase[len(word)-3] == 'e' and word_lowercase[len(word)-2].isdigit() and word_lowercase[len(word)-1].isdigit():
-            episode_index_index = vid.index(word)
-        elif isTag(word):
-            first_tag_index = vid.index(word)
-            break
-
-    show = " ".join(vid[:season_index]).title()
-    if len(vid[season_index]) == 6:
-        episode_index = season_index
-        show += " - " + vid[season_index].lower() + " - "
-    else:
-        show += " - " + vid[season_index].lower() + vid[episode_index].lower() + " - "
-    if (first_tag_index == -1):
-        show += " ".join(vid[episode_index+1:]).title()
-    else:
-        show += " ".join(vid[episode_index+1:first_tag_index]).title()
-    return show
-
-def createMoviePath(dest, file):
-    return os.path.join(dest, "Movies", splitExtension(file)[0], file)
-
-def createShowPath(dest, file):
-    show_name = file[:file.index(" -")]
-    season = "Season " + file[file.index("- s")+3:file.index("- s")+5]
-    
-    return os.path.join(dest, "Shows", show_name, season, file)
-
-def copyFile(vidSrc, dest):
-    ensurePath(os.path.split(dest)[0])
-    if os.path.exists(dest):
-        logger.info(dest + " already exists")
-    else:
-        shutil.copyfile(vidSrc, dest)
-        logger.info("completed " + dest)
-
-def moveFile(vidSrc, dest):
-    ensurePath(os.path.split(dest)[0])
-    if os.path.exists(dest):
-        logger.info(dest + " already exists")
-    else:
-        shutil.move(vidSrc, dest)
-        logger.info("completed " + dest)
-
-def ensurePath(filePath):
-    if not os.path.exists(filePath):
-        ensurePath(os.path.split(filePath)[0])
-        os.mkdir(filePath)
-
-def createPlexPath(srcPath, destPath):
-    file = splitExtension(os.path.split(srcPath)[1])
-    filename_split = file[0].split(findDivider(file[0]))
-    filename_cleaned = []
-    for word in filename_split:
-        word_cleaned = removeSymbols(word)
-        if word_cleaned != "":
-            filename_cleaned.append(word_cleaned)
-
-    if isShow(filename_cleaned):
-        filename = formatShowTitle(filename_cleaned)
-        return createShowPath(destPath, filename + '.' + file[1])
-    if isMovie(filename_cleaned):
-        filename = formatMovieTitle(filename_cleaned)
-        return createMoviePath(destPath, filename + '.' + file[1])
-    return ""
-
-def removeSymbols(string):
-    newStr = ""
-    for ch in string:
-        if ch.isalnum():
-            newStr += ch
-    return newStr
-
-def processPath(src, dest, move=False):
-    video_paths = findVideos(src)
-    relocate = copyFile
-    if(move):
-        relocate = moveFile
-    for vid in video_paths:
-        output_path = createPlexPath(vid, dest)
-        if output_path == "":
-            logger.warning("could not process " + vid)
-        else:
-            logger.info("processing " + vid)
-            relocate(vid, output_path)
-
-def generateDefaultConfig():
-    ensurePath(os.path.split(FormatterConfig.configPath)[-1])
-    with open(FormatterConfig.configPath, mode="w") as conf:
-        conf.write("# config for Plex Formatter daemon\n\n# source directories for unformatted files, separated by commas\nCOPYSRC=~/Downloads\nMOVESRC=\n\n# destination directory for formatted files\nDEST=~/Videos\n\nLOGLEVEL=info\n\n# any tags to be cut out of the file name\nTAGS=4k,2160,2160p,1080,1080p,720,720p,brrip,webrip,hdtv,amzn,x264,h264,hevc,h,264,265,h265,av1,bluray\n\n# acceptable file extensions\nEXTENSIONS=mp4,mkv,wmv,avi,mov,avchd,flv,f4v,swf")
-
-def loadConfig():
-    options = {}
-    if not os.path.exists(FormatterConfig.configPath):
-        generateDefaultConfig()
-    with open(FormatterConfig.configPath) as config:
-        while True:
-            line = config.readline().lstrip('\t ')
-            if len(line) == 0:
-                break
-            if line[0] == "\n" or line[0] == "#":
-                continue
-
-            splitLine = line.removesuffix("\n").split("=")
-            if len(splitLine) >= 2:
-                options[splitLine[0].lower()] = splitLine[1].split(",")
-            if line[-1] != "\n":
-                break
-    return options
-
+# Config Class
 class FormatterConfig:
     def __init__(self):
-        options = loadConfig()
-        self.copysrc = options.get("copysrc")
-        if self.copysrc:
-            for src in self.copysrc:
-                src = os.path.expanduser(src)
-        else:
-            self.copysrc = []
-        self.movesrc = options.get("movesrc")
-        if self.movesrc:
-            for src in self.movesrc:
-                src = os.path.expanduser(src)
-        else:
-            self.movesrc = []
-        self.dest = options.get("dest")
-        if self.dest:
-            self.dest = os.path.expanduser(self.dest[0])
-        match options.get("loglevel")[0]:
-            case "debug":
-                self.loglevel = logging.DEBUG
-            case "info":
-                self.loglevel = logging.INFO
-            case _:
-                self.loglevel = logging.WARNING
+        self.extensions = [
+            'mkv', 'mp4', 'mov', 'avi', 'wmv', 'flv', 'webm',
+            'vob', 'ogv', 'ogg', 'drc', 'mng', 'mts', 'm2ts',
+            'ts', '3gp', 'm4v', 'mpg', 'mpeg', 'f4v', 'f4p',
+            'f4a', 'f4b'
+        ]
+        self.tags = ['unrated', 'x264', '1080p', '720p', 'hdtv', 'bluray', 'bdrip', 'dvdrip']
+        self.watch_directory = '/path/to/watch'
+        self.show_destination_directory = '/path/to/destination/'
+        self.movie_destination_directory = '/path/to/destination/'
+        self.misc_destination_directory = '/path/to/destination/'
 
-        self.tags = options.get("tags")
-        self.extensions = options.get("extensions")
-    configPath = os.path.expanduser(os.path.join("~", ".config", "plexFormatter", "plexFormatter.conf"))
-    logPath = os.path.expanduser(os.path.join("~", ".log", "plexFormatter", "plexFormatter.log"))
+# FileFormatter Class
+class FileFormatter:
+    def __init__(self, config: FormatterConfig, logger: logging.Logger):
+        self.config = config
+        self.logger = logger
 
-def main(args):
-    logger.debug(args)
-    if (args.copy):
-        processPath(args.copy[0], args.copy[1])
-    if (args.move):
-        processPath(args.move[0], args.move[1], move=True)
-    if (args.daemon):
-        match args.daemon:
-            case "start":
-                daemonLoop()
-            case "stop":
-                pass
-            case "restart":
-                pass
-            case "config":
-                os.system("nano " + config.configPath)
+    def split_extension(self, filename: str) -> list[str]:
+        extension = filename.split('.')[-1]
+        return [filename[:-(len(extension) + 1)],  '.' + extension]
 
-class CopyHandler(FileSystemEventHandler):
+    def is_video(self, filename: str) -> bool:
+        return self.split_extension(filename)[1].lower()[1:] in self.config.extensions
+
+    def is_tag(self, word: str) -> bool:
+        return word.lower() in self.config.tags
+    
+    def find_year(self, file_name: str) -> str:
+        split_filename = file_name.split(' ')
+        for word in split_filename[1:]:
+            if len(word) == 4 and word.isdigit():
+                return word
+        return None
+
+    def find_episode_info(self, file_name: str) -> str:
+        split_filename = file_name.split(' ')
+        season = None
+        episode = None
+        for word in split_filename:
+            if len(word) == 3:
+                if word[0].lower() == 's' and word[1].isdigit() and word[2].isdigit():
+                    season = word
+                elif word[0].lower() == 'e' and word[1].isdigit() and word[2].isdigit():
+                    episode = word
+                if season and episode:
+                    return [season, episode]
+            elif len(word) == 6:
+                if (word[0].lower() == 's' and word[1].isdigit() and word[2].isdigit() 
+                    and word[3].lower() == 'e' and word[4].isdigit() and word[5].isdigit()):
+                    return [word[:3], word[3:]]
+        return None
+
+    def remove_symbols(self, word: str) -> str:
+        return ''.join([char for char in word if char.isalnum()])
+    
+    def format_filename(self, file_name: str) -> str:
+        name_and_extension = self.split_extension(file_name)
+        file_name_no_extension =name_and_extension[0]
+        file_extension = name_and_extension[1]
+        
+        name_parts = [self.remove_symbols(part) for part in file_name_no_extension.replace('.', ' ').split(' ')]
+        first_tag_index = 0
+        for part in name_parts:
+            first_tag_index += 1
+            if self.is_tag(part):
+                name_parts = name_parts[:first_tag_index]
+                break
+        
+        formatted_name = ' '.join(name_parts).title()
+        
+        return formatted_name + file_extension
+    
+    def create_destination_path(self, file_name: str) -> str:
+        name_and_extension = self.split_extension(file_name)
+        file_name_no_extension =name_and_extension[0]
+        file_extension = name_and_extension[1]
+        
+        # dest/showname/Season xx/show name - sxx exx -.ext
+        episode_info = self.find_episode_info(file_name_no_extension)
+        if episode_info:
+            show_name = file_name_no_extension[:file_name_no_extension.find(episode_info[0])]
+            return os.path.join(self.config.movie_destination_directory,
+                                show_name,
+                                f'Season {episode_info[0][1:]} - ',
+                                show_name + f' - {episode_info[0]}{episode_info[1]} - ' + file_extension)
+        
+        # dest/moviename (year)/moviename (year).ext
+        year = self.find_year(file_name_no_extension)
+        if year:
+            movie_name = file_name_no_extension[:file_name_no_extension.find(year)] + f'({year})'
+            return os.path.join(self.config.movie_destination_directory,
+                                movie_name,
+                                movie_name + file_extension)
+            
+        return self.config.misc_destination_directory + file_name
+    
+# VideoFile Class
+class VideoFile():
+    def __init__(self):
+        self.last_modification = time.time()
+        self.file_name = ''
+        self.src_path = ''
+        self.dest_path = ''
+
+# Daemon Class
+class Daemon(FileSystemEventHandler):
+    def __init__(self, config: FormatterConfig, file_formatter: FileFormatter, logger: logging.Logger):
+        self.config = config
+        self.file_formatter = file_formatter
+        self.logger = logger
+        self.observer = Observer()
+        self.videos = []
+
+    def on_modified(self, event):
+        if not event.is_directory:
+            self.logger.info(f"Modification detected: {event.src_path}")
+            for video in self.videos:
+                if video.src_path == event.src_path:
+                    video.last_modification = time.time()
+                    break
+
     def on_created(self, event):
-        processPath(event.src_path, config.dest)
-class MoveHandler(FileSystemEventHandler):
-    def on_created(self, event):
-        processPath(event.src_path, config.dest, move=True)
+        if not event.is_directory:
+            self.logger.info(f"New file detected: {event.src_path}")
+            if self.file_formatter.is_video(event.src_path):
+                self.add_video(event.src_path)
+    
+    def add_video(self, video_path: str):
+        video = VideoFile()
+        video.src_path = video_path
+        video.file_name = self.file_formatter.format_filename(os.path.basename())
+        video.dest_path = self.file_formatter.create_destination_path(video.file_name)
+        self.videos.append(video)
+        
+    def find_videos(self, file_path: str):
+        if os.path.exists(file_path):
+            if os.path.isfile(file_path):
+                if self.file_formatter.is_video(file_path):
+                    self.logger.info(f"Video file found at {file_path}")
+                    self.add_video(file_path)
+            elif os.path.isdir(file_path):
+                for file in os.listdir(file_path):
+                    self.find_videos(os.path.join(file_path, file))
+        else:
+            self.logger.warning(f"{self.find_videos.__name__}: {file_path} is not a valid path.")
 
-def daemonLoop():
-    logger.debug("DaemonLoop started")
-    # Create observer and event handlers
-    observer = Observer()
-    copy_handler = CopyHandler()
-    move_handler = MoveHandler()
+    def check_videos(self):
+        current_time = time.time()
+        for video in self.videos:
+            if current_time - video.last_modification > 60:
+                self.move_video_file(video)
+        
+    def move_video_file(self, video: VideoFile):
+        shutil.move(video.src_path, video.dest_path)
+        self.logger.info(f"Moved {video.src_path} to {video.dest_path}")
+        
+    def signal_handler(self, signum, frame):
+        signame = signal.Signals(signum).name
+        self.logger.info(f'Signal handler called with signal {signame} ({signum})')
+        self.stop()
 
-    all_paths_valid = False
-    failed_count = 0
-    while not all_paths_valid:
-        all_paths_valid = True
-        all_paths_valid = all_paths_valid and os.path.exists(config.dest)
-        for path in config.copysrc:
-            all_paths_valid = all_paths_valid and os.path.exists(path)
-        for path in config.movesrc:
-            all_paths_valid = all_paths_valid and os.path.exists(path)
-        if not all_paths_valid:
-            failed_count += 1
-            if failed_count > 20:
-                exit(1)
-            logger.warning("could not find all source/destination paths. trying again in 10 seconds")
-            sleep(10)
+    def start(self):
+        event_handler = self
+        self.observer.schedule(event_handler, self.config.watch_directory, recursive=True)
+        self.observer.start()
+        self.logger.info("Daemon started. Watching directory for changes...")
+        signal.signal(signal.SIGTERM, self.signal_handler)
+        self.find_videos(self.config.watch_directory)
+        try:
+            while True:
+                time.sleep(1)
+                self.check_videos()
+        except KeyboardInterrupt:
+            self.observer.stop()
+            self.logger.info("Daemon stopped by user.")
+        self.observer.join()
+        
+    def stop(self):
+        self.observer.stop()
+        self.observer.join()
+        self.logger.info("Daemon stopped.")
 
-    # Set up observer to watch specified directories and do initial scan
-    for path in config.copysrc:
-        logger.info("Now observing " + path)
-        observer.schedule(copy_handler, path)
-        processPath(path, config.dest)
-    for path in config.movesrc:
-        logger.info("Now observing " + path)
-        observer.schedule(move_handler, path)
-        processPath(path, config.dest)
-    observer.start()
-    logger.debug("Daemon initialized")
-    try:
-        while True:
-            sleep(10)
-    except:
-        observer.stop()
-    logger.info("Daemon Stopped")
-    observer.join()
+# Logger Setup
+def setup_logger() -> logging.Logger:
+    logger = logging.getLogger('FileFormatterDaemon')
+    logger.setLevel(logging.INFO)
+    c_handler = logging.StreamHandler()
+    f_handler = logging.FileHandler('file_formatter.log')
+    c_handler.setLevel(logging.INFO)
+    f_handler.setLevel(logging.INFO)
+    c_format = logging.Formatter('%(asctime)s - %(message)s')
+    f_format = logging.Formatter('%(asctime)s - %(message)s')
+    c_handler.setFormatter(c_format)
+    f_handler.setFormatter(f_format)
+    logger.addHandler(c_handler)
+    logger.addHandler(f_handler)
+    return logger
 
-config = FormatterConfig()
-# set up the logger
-ensurePath(os.path.split(config.logPath)[0])
-logging.basicConfig(format="%(asctime)s %(levelname)s: %(message)s", level=config.loglevel)
-logger = logging.getLogger(__name__)
-handler = RotatingFileHandler(config.logPath, maxBytes=1000000, backupCount=5)
-handler.setFormatter(logging.Formatter(fmt="%(asctime)s %(levelname)s: %(message)s"))
+# Main Execution
+def main():
+    config = FormatterConfig()
+    logger = setup_logger()
+    file_formatter = FileFormatter(config, logger)
+    daemon = Daemon(config, file_formatter, logger)
+    daemon.start()
 
-logger.addHandler(handler)
-logger.info("\nPlex Formatter initialized\n\n")
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Copy video files from one directory to another and format them for use in Plex.")
-    parser.add_argument("--move", "-m", nargs=2, metavar=("[source]", "[destination]"), help="Format and move files from source to destination. Source can be a file or directory")
-    parser.add_argument("--copy", "-c", nargs=2, metavar=("[source]", "[destination]"), help="Format and copy files from source to destination. Source can be a file or directory")
-    parser.add_argument("--daemon", "-d", choices=["start", "stop", "restart", "config"], help="Run as a daemon, using the configuration provided")
-    args = parser.parse_args()
-    main(args)
+if __name__ == '__main__':
+    main()
