@@ -171,6 +171,8 @@ class Daemon(FileSystemEventHandler):
                 self.move_video_file(video)
         
     def move_video_file(self, video: VideoFile):
+        if not os.path.exists(os.path.dirname(video.dest_path)):
+            os.makedirs(os.path.dirname(video.dest_path))
         shutil.move(video.src_path, video.dest_path)
         self.logger.info(f"Moved {video.src_path} to {video.dest_path}")
         
