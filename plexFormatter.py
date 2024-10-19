@@ -34,10 +34,9 @@ class FileFormatter:
 
     def split_extension(self, filename: str) -> list[str]:
         extension = filename.split('.')[-1]
-        if extension[0] == filename:
-            extension =None
-        else:
-            extension = '.' + extension
+        if extension == filename:
+            return [filename, None]
+        extension = '.' + extension
         return [filename[:-(len(extension))],  extension]
 
     def is_video(self, filename: str) -> bool:
