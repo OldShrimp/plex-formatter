@@ -98,11 +98,11 @@ class FileFormatter:
         # dest/showname/Season xx/show name - sxx exx -.ext
         episode_info = self.find_episode_info(file_name_no_extension)
         if episode_info:
-            show_name = file_name_no_extension[:file_name_no_extension.find(episode_info[0])].title()
-            return os.path.join(self.config.movie_destination_directory,
+            show_name = file_name_no_extension[:file_name_no_extension.find(episode_info[0])-1].title()
+            return os.path.join(self.config.show_destination_directory,
                                 show_name,
-                                f'Season {episode_info[0][1:]} - ',
-                                show_name + f' - {episode_info[0]}{episode_info[1]} - ' + file_extension)
+                                f'Season {episode_info[0][1:]}',
+                                show_name + f' - {episode_info[0]}{episode_info[1]} -' + file_extension)
         
         # dest/moviename (year)/moviename (year).ext
         year = self.find_year(file_name_no_extension)
