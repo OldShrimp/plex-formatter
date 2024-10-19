@@ -13,13 +13,13 @@ class FormatterConfig:
             'mkv', 'mp4', 'mov', 'avi', 'wmv', 'flv', 'webm',
             'vob', 'ogv', 'ogg', 'drc', 'mng', 'mts', 'm2ts',
             'ts', '3gp', 'm4v', 'mpg', 'mpeg', 'f4v', 'f4p',
-            'f4a', 'f4b', 'proper', 'remastered', 'theatrical',
-            'rarbg'
+            'f4a', 'f4b'
         ]
         self.tags = [
             'av1', 'x264', 'hdtv', 'bluray', 'bdrip', 'dvdrip', 'brrip',
             '4k', '2160', '2160p', '1080', '1080p', '720', '720p',
-            'webrip', 'amzn', 'h264', 'hevc', 'h', '264' ,'265' ,'h265'
+            'webrip', 'amzn', 'h264', 'hevc', 'h', '264' ,'265' ,'h265',
+            'proper', 'remastered', 'theatrical', 'rarbg'
         ]
         self.watch_directory = '/path/to/watch'
         self.show_destination_directory = '/path/to/destination/'
@@ -81,10 +81,10 @@ class FileFormatter:
         name_parts = [self.remove_symbols(part) for part in file_name_no_extension.replace('.', ' ').split(' ')]
         first_tag_index = 0
         for part in name_parts:
-            first_tag_index += 1
             if self.is_tag(part):
                 name_parts = name_parts[:first_tag_index]
                 break
+            first_tag_index += 1
         
         formatted_name = ' '.join(name_parts)
         

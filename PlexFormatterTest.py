@@ -56,10 +56,10 @@ class FileFormatterTestCase(unittest.TestCase):
 
 class DaemonTestCase(unittest.TestCase):
 
-    def setup(self):
+    def setUp(self):
         pass
     
-    def teardown(self):
+    def tearDown(self):
         pass
     
     def test_add_video(self):
