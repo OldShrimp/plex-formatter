@@ -13,7 +13,8 @@ class FormatterConfig:
             'mkv', 'mp4', 'mov', 'avi', 'wmv', 'flv', 'webm',
             'vob', 'ogv', 'ogg', 'drc', 'mng', 'mts', 'm2ts',
             'ts', '3gp', 'm4v', 'mpg', 'mpeg', 'f4v', 'f4p',
-            'f4a', 'f4b'
+            'f4a', 'f4b', 'proper', 'remastered', 'theatrical',
+            'rarbg'
         ]
         self.tags = [
             'av1', 'x264', 'hdtv', 'bluray', 'bdrip', 'dvdrip', 'brrip',
@@ -37,7 +38,7 @@ class FileFormatter:
             extension =None
         else:
             extension = '.' + extension
-        return [filename[:-(len(extension) + 1)],  '.' + extension]
+        return [filename[:-(len(extension))],  extension]
 
     def is_video(self, filename: str) -> bool:
         return self.split_extension(filename)[1].lower()[1:] in self.config.extensions
@@ -48,7 +49,7 @@ class FileFormatter:
     def find_year(self, file_name: str) -> str:
         split_filename = file_name.split(' ')
         for word in split_filename[1:]:
-            if len(word) == 4 and word.isdigit():
+            if len(word) == 4 and word.isdigit() and not self.is_tag(word):
                 return word
         return None
 
@@ -75,7 +76,7 @@ class FileFormatter:
     
     def format_filename(self, file_name: str) -> str:
         name_and_extension = self.split_extension(file_name)
-        file_name_no_extension =name_and_extension[0]
+        file_name_no_extension = name_and_extension[0].lower()
         file_extension = name_and_extension[1]
         
         name_parts = [self.remove_symbols(part) for part in file_name_no_extension.replace('.', ' ').split(' ')]
@@ -86,19 +87,19 @@ class FileFormatter:
                 name_parts = name_parts[:first_tag_index]
                 break
         
-        formatted_name = ' '.join(name_parts).title()
+        formatted_name = ' '.join(name_parts)
         
         return formatted_name + file_extension
     
     def create_destination_path(self, file_name: str) -> str:
         name_and_extension = self.split_extension(file_name)
-        file_name_no_extension =name_and_extension[0]
+        file_name_no_extension = name_and_extension[0]
         file_extension = name_and_extension[1]
         
         # dest/showname/Season xx/show name - sxx exx -.ext
         episode_info = self.find_episode_info(file_name_no_extension)
         if episode_info:
-            show_name = file_name_no_extension[:file_name_no_extension.find(episode_info[0])]
+            show_name = file_name_no_extension[:file_name_no_extension.find(episode_info[0])].title()
             return os.path.join(self.config.movie_destination_directory,
                                 show_name,
                                 f'Season {episode_info[0][1:]} - ',
@@ -107,7 +108,7 @@ class FileFormatter:
         # dest/moviename (year)/moviename (year).ext
         year = self.find_year(file_name_no_extension)
         if year:
-            movie_name = file_name_no_extension[:file_name_no_extension.find(year)] + f'({year})'
+            movie_name = file_name_no_extension[:file_name_no_extension.find(year)].title() + f'({year})'
             return os.path.join(self.config.movie_destination_directory,
                                 movie_name,
                                 movie_name + file_extension)
