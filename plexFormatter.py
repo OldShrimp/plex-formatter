@@ -15,7 +15,11 @@ class FormatterConfig:
             'ts', '3gp', 'm4v', 'mpg', 'mpeg', 'f4v', 'f4p',
             'f4a', 'f4b'
         ]
-        self.tags = ['unrated', 'x264', '1080p', '720p', 'hdtv', 'bluray', 'bdrip', 'dvdrip']
+        self.tags = [
+            'av1', 'x264', 'hdtv', 'bluray', 'bdrip', 'dvdrip', 'brrip',
+            '4k', '2160', '2160p', '1080', '1080p', '720', '720p',
+            'webrip', 'amzn', 'h264', 'hevc', 'h', '264' ,'265' ,'h265'
+        ]
         self.watch_directory = '/path/to/watch'
         self.show_destination_directory = '/path/to/destination/'
         self.movie_destination_directory = '/path/to/destination/'
@@ -29,6 +33,10 @@ class FileFormatter:
 
     def split_extension(self, filename: str) -> list[str]:
         extension = filename.split('.')[-1]
+        if extension[0] == filename:
+            extension =None
+        else:
+            extension = '.' + extension
         return [filename[:-(len(extension) + 1)],  '.' + extension]
 
     def is_video(self, filename: str) -> bool:
