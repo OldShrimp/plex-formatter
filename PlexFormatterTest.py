@@ -1,5 +1,8 @@
 import unittest
 import logging
+import os
+import shutil
+import time
 import plexFormatter
 
 class FileFormatterTestCase(unittest.TestCase):
@@ -11,6 +14,7 @@ class FileFormatterTestCase(unittest.TestCase):
         self.config.movie_destination_directory = '/movie/'
         self.config.show_destination_directory = '/show/'
         self.formatter = plexFormatter.FileFormatter(self.config, self.logger)
+        self.daemon = plexFormatter.Daemon(self.config, self.formatter, self.logger)
 
     def test_split_extension(self):
         self.assertEqual(self.formatter.split_extension('test.ext'), ['test', '.ext'], 'extension split incorrectly')
@@ -53,34 +57,66 @@ class FileFormatterTestCase(unittest.TestCase):
         self.assertEqual(self.formatter.create_destination_path('test.mp4'),
                         '/misc/test.mp4',
                         'Failed to create destination path')
+        
+    def test_add_video(self):
+        self.daemon.add_video('/Alien.1979.PROPER.REMASTERED.THEATRICAL.1080p.BluRay.x265-RARBG.mp4')
+        correct_video = ['/Alien.1979.PROPER.REMASTERED.THEATRICAL.1080p.BluRay.x265-RARBG.mp4', 'alien 1979.mp4', '/movie/Alien (1979)/Alien (1979).mp4']
+        self.assertListEqual(correct_video, [self.daemon.videos[0].src_path, self.daemon.videos[0].file_name, self.daemon.videos[0].dest_path])
 
 class DaemonTestCase(unittest.TestCase):
+
+    def setUp(self):
+        os.mkdir(self.config.misc_destination_directory)
+        os.mkdir(self.config.movie_destination_directory)
+        os.mkdir(self.config.show_destination_directory)
+        os.mkdir(self.config.watch_directory)
+        with open(os.path.join(self.config.watch_directory, 'Alien.1979.PROPER.REMASTERED.THEATRICAL.1080p.BluRay.x265-RARBG.mp4')) as file:
+            file.write('test')
+        with open(os.path.join(self.config.watch_directory, 'Stranger.Things.S01E01.1080p.BluRay.x265-RARBG.mp4')) as file:
+            file.write('test')
+        with open(os.path.join(self.config.watch_directory, 'test.mp4')) as file:
+            file.write('test')
+        self.logger = logging.getLogger(__name__)
+        self.config = plexFormatter.FormatterConfig()
+        self.config.misc_destination_directory = '/daemon_test/misc/'
+        self.config.movie_destination_directory = '/daemon_test/movie/'
+        self.config.show_destination_directory = '/daemon_test/show/'
+        self.config.watch_directory = '/daemon_test/watch/'
+        self.formatter = plexFormatter.FileFormatter(self.config, self.logger)
+        self.daemon = plexFormatter.Daemon(self.config, self.formatter, self.logger)
+        self.daemon.delay_before_moving = 0
+    
+    def tearDown(self):
+        shutil.rmtree('/daemon_test/')
+    
+    def test_find_videos(self):
+        self.daemon.find_videos('/daemon_test/')
+        found_videos = {video.file_name for video in self.daemon.videos}
+        correct_videos = {'Alien (1979).mp4', 'Stranger Things - s01e01 -.mp4', 'test.mp4'}
+        self.assertSetEqual(found_videos, correct_videos, 'Failed to find videos')
+    
+    def test_move_video_file(self):
+        self.daemon.find_videos('/daemon_test/')
+        for video in self.daemon.videos:
+            self.daemon.move_video_file(video)
+        dir_contents = [os.listdir('/daemon_test/watch'), os.listdir('/daemon_test/misc'), os.listdir('/daemon_test/movie'), os.listdir('/daemon_test/show')]
+        correct_dir_contents = [[], ['test.mp4'], ['Alien (1979).mp4'], ['Stranger Things - s01e01 -.mp4']]
+        self.assertListEqual(dir_contents, correct_dir_contents, 'failed to move all files correctly')
+    
+    def test_check_videos(self):
+        self.daemon.find_videos('/daemon_test/')
+        time.sleep(1)
+        self.daemon.check_videos()
+        dir_contents = [os.listdir('/daemon_test/watch'), os.listdir('/daemon_test/misc'), os.listdir('/daemon_test/movie'), os.listdir('/daemon_test/show')]
+        correct_dir_contents = [[], ['test.mp4'], ['Alien (1979).mp4'], ['Stranger Things - s01e01 -.mp4']]
+        self.assertListEqual(dir_contents, correct_dir_contents, 'not all videos were checked')
+
+class DaemonHandlersTestCase(unittest.TestCase):
 
     def setUp(self):
         pass
     
     def tearDown(self):
-        pass
-    
-    def test_add_video(self):
-        pass
-    
-    def test_find_videos(self):
-        pass
-    
-    def test_move_video_file(self):
-        pass
-    
-    def test_check_videos(self):
-        pass
-    
-
-class DaemonHandlersTestCase(unittest.TestCase):
-
-    def setup(self):
-        pass
-    
-    def teardown(self):
         pass
     
     def test_on_modified(self):
@@ -97,8 +133,6 @@ class DaemonHandlersTestCase(unittest.TestCase):
     
     def test_stop(self):
         pass
-
-
 
 if __name__ == '__main__':
     unittest.main()
