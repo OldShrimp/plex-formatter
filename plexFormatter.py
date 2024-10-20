@@ -130,6 +130,7 @@ class Daemon(FileSystemEventHandler):
         self.logger = logger
         self.observer = Observer()
         self.videos = []
+        self.delay_before_moving = 60
 
     def on_modified(self, event):
         if not event.is_directory:
@@ -148,7 +149,7 @@ class Daemon(FileSystemEventHandler):
     def add_video(self, video_path: str):
         video = VideoFile()
         video.src_path = video_path
-        video.file_name = self.file_formatter.format_filename(os.path.basename())
+        video.file_name = self.file_formatter.format_filename(os.path.basename(video_path))
         video.dest_path = self.file_formatter.create_destination_path(video.file_name)
         self.videos.append(video)
         
@@ -167,7 +168,7 @@ class Daemon(FileSystemEventHandler):
     def check_videos(self):
         current_time = time.time()
         for video in self.videos:
-            if current_time - video.last_modification > 60:
+            if current_time - video.last_modification > self.delay_before_moving:
                 self.move_video_file(video)
         
     def move_video_file(self, video: VideoFile):
