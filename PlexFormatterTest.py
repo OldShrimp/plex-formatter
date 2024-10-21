@@ -115,7 +115,7 @@ class DaemonTestCase(unittest.TestCase):
     
     def test_check_videos(self):
         self.daemon.find_videos(self.config.watch_directory)
-        time.sleep(1)
+        time.sleep(0.1)
         self.daemon.check_videos()
         dir_contents = [os.listdir(self.config.watch_directory), os.listdir(self.config.misc_destination_directory),
                         os.listdir(os.path.join(self.config.movie_destination_directory, 'Alien (1979)')),
@@ -132,10 +132,13 @@ class DaemonHandlersTestCase(unittest.TestCase):
         self.config.movie_destination_directory = os.path.join(self.root_folder, 'movie/')
         self.config.show_destination_directory = os.path.join(self.root_folder, 'show/')
         self.config.watch_directory = os.path.join(self.root_folder, 'watch/')
+        self.watch_nested_directory = os.path.join(self.config.watch_directory, 'watch2/')
         if not os.path.exists(os.path.abspath(self.root_folder)):
             os.mkdir(os.path.abspath(self.root_folder))
         if not os.path.exists(self.config.watch_directory):
             os.mkdir(self.config.watch_directory)
+        if not os.path.exists(self.watch_nested_directory):
+            os.mkdir(self.watch_nested_directory)
         if not os.path.exists(self.config.misc_destination_directory):
             os.mkdir(self.config.misc_destination_directory)
         if not os.path.exists(self.config.movie_destination_directory):
@@ -147,6 +150,8 @@ class DaemonHandlersTestCase(unittest.TestCase):
         with open(os.path.join(self.config.watch_directory, 'Stranger.Things.S01E01.1080p.BluRay.x265-RARBG.mp4'), 'w+') as file:
             file.write('test')
         with open(os.path.join(self.config.watch_directory, 'test.mp4'), 'w+') as file:
+            file.write('test')
+        with open(os.path.join(self.watch_nested_directory, 'test2.mp4'), 'w+') as file:
             file.write('test')
         self.formatter = plexFormatter.FileFormatter(self.config, self.logger)
         self.daemon = plexFormatter.Daemon(self.config, self.formatter, self.logger)
@@ -160,19 +165,31 @@ class DaemonHandlersTestCase(unittest.TestCase):
     
     def test_on_modified(self):
         self.daemon.add_video(os.path.join(self.config.watch_directory, 'Alien.1979.PROPER.REMASTERED.THEATRICAL.1080p.BluRay.x265-RARBG.mp4'))
-        initial_time = self.daemon.videos[0].last_modification
-        time.sleep(1)
+        self.daemon.add_video(os.path.join(self.watch_nested_directory, 'test2.mp4'))
+        initial_time_0 = self.daemon.videos[0].last_modification
+        initial_time_1 = self.daemon.videos[0].last_modification
+        time.sleep(0.1)
         with open(self.daemon.videos[0].src_path, 'w+') as file:
             file.write('testing testing')
-        self.assertNotEqual(self.daemon.videos[0].last_modification, initial_time, 'failed to detect modified file')
+        with open(self.daemon.videos[1].src_path, 'w+') as file:
+            file.write('testing testing')
+        self.assertNotEqual(self.daemon.videos[0].last_modification, initial_time_0, 'failed to detect modified file')
+        self.assertNotEqual(self.daemon.videos[1].last_modification, initial_time_1, 'failed to detect modified file recursively')
     
     def test_on_created(self):
+        os.mkdir(os.path.join(self.config.watch_directory, 'test_deeper'))
         with open(self.config.watch_directory + 'test.mkv', 'w+') as file:
             file.write('testing testing')
         with open(self.config.watch_directory + 'test', 'w+') as file:
             file.write('testing testing')
-        time.sleep(1)
+        time.sleep(0.1)
         self.assertEqual(len(self.daemon.videos), 1, 'failed to detect new file')
+
+        with open(os.path.join(self.config.watch_directory, 'test_deeper') + 'test_deeper.mkv', 'w+') as file:
+            file.write('testing testing')
+        time.sleep(0.1)
+        self.assertEqual(len(self.daemon.videos), 2, 'failed to detect new file recursively')
+
     
     def test_signal_handler(self):
         pass
