@@ -40,7 +40,10 @@ class FileFormatter:
         return [filename[:-(len(extension))],  extension]
 
     def is_video(self, filename: str) -> bool:
-        return self.split_extension(filename)[1].lower()[1:] in self.config.extensions
+        extension = self.split_extension(filename)[1]
+        if extension == None:
+            return False
+        return extension[1:].lower() in self.config.extensions
 
     def is_tag(self, word: str) -> bool:
         return word.lower() in self.config.tags
