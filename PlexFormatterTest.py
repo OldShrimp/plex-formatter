@@ -114,24 +114,51 @@ class DaemonTestCase(unittest.TestCase):
 class DaemonHandlersTestCase(unittest.TestCase):
 
     def setUp(self):
-        pass
+        os.mkdir(self.config.misc_destination_directory)
+        os.mkdir(self.config.movie_destination_directory)
+        os.mkdir(self.config.show_destination_directory)
+        os.mkdir(self.config.watch_directory)
+        with open(os.path.join(self.config.watch_directory, 'Alien.1979.PROPER.REMASTERED.THEATRICAL.1080p.BluRay.x265-RARBG.mp4')) as file:
+            file.write('test')
+        with open(os.path.join(self.config.watch_directory, 'Stranger.Things.S01E01.1080p.BluRay.x265-RARBG.mp4')) as file:
+            file.write('test')
+        with open(os.path.join(self.config.watch_directory, 'test.mp4')) as file:
+            file.write('test')
+        self.logger = logging.getLogger(__name__)
+        self.config = plexFormatter.FormatterConfig()
+        self.config.misc_destination_directory = '/daemon_test/misc/'
+        self.config.movie_destination_directory = '/daemon_test/movie/'
+        self.config.show_destination_directory = '/daemon_test/show/'
+        self.config.watch_directory = '/daemon_test/watch/'
+        self.formatter = plexFormatter.FileFormatter(self.config, self.logger)
+        self.daemon = plexFormatter.Daemon(self.config, self.formatter, self.logger)
+        self.daemon.delay_before_moving = 0
+        self.daemon.observer.schedule(self.daemon, self.config.watch_directory, recursive=True)
+        self.daemon.observer.start()
     
     def tearDown(self):
-        pass
+        self.daemon.stop()
+        shutil.rmtree('/daemon_test/')
     
     def test_on_modified(self):
-        pass
+        self.daemon.add_video(os.path.join(self.config.watch_directory, 'Alien.1979.PROPER.REMASTERED.THEATRICAL.1080p.BluRay.x265-RARBG.mp4'))
+        initial_time = self.daemon.videos[0].last_modification
+        time.sleep(1)
+        with open(self.daemon.videos[0].src_path) as file:
+            file.write('testing testing')
+        self.assertEqual(self.daemon.videos[0].last_modified, initial_time, 'failed to detect modified file')
     
     def test_on_created(self):
-        pass
+        with open(self.config.watch_directory + 'test.mkv', 'w') as file:
+            file.write('testing testing')
+        with open(self.config.watch_directory + 'test', 'w') as file:
+            file.write('testing testing')
+        self.assertEqual(len(self.daemon.videos), 1, 'failed to detect new file')
     
     def test_signal_handler(self):
         pass
     
     def test_start(self):
-        pass
-    
-    def test_stop(self):
         pass
 
 if __name__ == '__main__':
