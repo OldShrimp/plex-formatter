@@ -1,8 +1,10 @@
 import unittest
 import logging
 import os
+import os.path
 import shutil
 import time
+import watchdog
 import plexFormatter
 
 class FileFormatterTestCase(unittest.TestCase):
@@ -64,72 +66,88 @@ class FileFormatterTestCase(unittest.TestCase):
         self.assertListEqual(correct_video, [self.daemon.videos[0].src_path, self.daemon.videos[0].file_name, self.daemon.videos[0].dest_path])
 
 class DaemonTestCase(unittest.TestCase):
-
     def setUp(self):
-        os.mkdir(self.config.misc_destination_directory)
-        os.mkdir(self.config.movie_destination_directory)
-        os.mkdir(self.config.show_destination_directory)
-        os.mkdir(self.config.watch_directory)
-        with open(os.path.join(self.config.watch_directory, 'Alien.1979.PROPER.REMASTERED.THEATRICAL.1080p.BluRay.x265-RARBG.mp4')) as file:
-            file.write('test')
-        with open(os.path.join(self.config.watch_directory, 'Stranger.Things.S01E01.1080p.BluRay.x265-RARBG.mp4')) as file:
-            file.write('test')
-        with open(os.path.join(self.config.watch_directory, 'test.mp4')) as file:
-            file.write('test')
         self.logger = logging.getLogger(__name__)
         self.config = plexFormatter.FormatterConfig()
-        self.config.misc_destination_directory = '/daemon_test/misc/'
-        self.config.movie_destination_directory = '/daemon_test/movie/'
-        self.config.show_destination_directory = '/daemon_test/show/'
-        self.config.watch_directory = '/daemon_test/watch/'
+        self.root_folder = os.path.abspath('./daemon_test/')
+        self.config.misc_destination_directory = os.path.join(self.root_folder, 'misc/')
+        self.config.movie_destination_directory = os.path.join(self.root_folder, 'movie/')
+        self.config.show_destination_directory = os.path.join(self.root_folder, 'show/')
+        self.config.watch_directory = os.path.join(self.root_folder, 'watch/')
+        if not os.path.exists(os.path.abspath(self.root_folder)):
+            os.mkdir(os.path.abspath(self.root_folder))
+        if not os.path.exists(self.config.watch_directory):
+            os.mkdir(self.config.watch_directory)
+        if not os.path.exists(self.config.misc_destination_directory):
+            os.mkdir(self.config.misc_destination_directory)
+        if not os.path.exists(self.config.movie_destination_directory):
+            os.mkdir(self.config.movie_destination_directory)
+        if not os.path.exists(self.config.show_destination_directory):
+            os.mkdir(self.config.show_destination_directory)
+        with open(os.path.join(self.config.watch_directory, 'Alien.1979.PROPER.REMASTERED.THEATRICAL.1080p.BluRay.x265-RARBG.mp4'), 'w+') as file:
+            file.write('test')
+        with open(os.path.join(self.config.watch_directory, 'Stranger.Things.S01E01.1080p.BluRay.x265-RARBG.mp4'), 'w+') as file:
+            file.write('test')
+        with open(os.path.join(self.config.watch_directory, 'test.mp4'), 'w+') as file:
+            file.write('test')
         self.formatter = plexFormatter.FileFormatter(self.config, self.logger)
         self.daemon = plexFormatter.Daemon(self.config, self.formatter, self.logger)
         self.daemon.delay_before_moving = 0
     
     def tearDown(self):
-        shutil.rmtree('/daemon_test/')
+        shutil.rmtree(os.path.abspath(self.root_folder))
     
     def test_find_videos(self):
-        self.daemon.find_videos('/daemon_test/')
+        self.daemon.find_videos(self.config.watch_directory)
         found_videos = {video.file_name for video in self.daemon.videos}
-        correct_videos = {'Alien (1979).mp4', 'Stranger Things - s01e01 -.mp4', 'test.mp4'}
+        correct_videos = {'alien 1979.mp4', 'stranger things s01e01.mp4', 'test.mp4'}
         self.assertSetEqual(found_videos, correct_videos, 'Failed to find videos')
     
     def test_move_video_file(self):
-        self.daemon.find_videos('/daemon_test/')
+        self.daemon.find_videos(self.config.watch_directory)
         for video in self.daemon.videos:
             self.daemon.move_video_file(video)
-        dir_contents = [os.listdir('/daemon_test/watch'), os.listdir('/daemon_test/misc'), os.listdir('/daemon_test/movie'), os.listdir('/daemon_test/show')]
+        dir_contents = [os.listdir(self.config.watch_directory), os.listdir(self.config.misc_destination_directory),
+                        os.listdir(os.path.join(self.config.movie_destination_directory, 'Alien (1979)')),
+                        os.listdir(os.path.join(self.config.show_destination_directory, 'Stranger Things', 'Season 01'))]
         correct_dir_contents = [[], ['test.mp4'], ['Alien (1979).mp4'], ['Stranger Things - s01e01 -.mp4']]
         self.assertListEqual(dir_contents, correct_dir_contents, 'failed to move all files correctly')
     
     def test_check_videos(self):
-        self.daemon.find_videos('/daemon_test/')
+        self.daemon.find_videos(self.config.watch_directory)
         time.sleep(1)
         self.daemon.check_videos()
-        dir_contents = [os.listdir('/daemon_test/watch'), os.listdir('/daemon_test/misc'), os.listdir('/daemon_test/movie'), os.listdir('/daemon_test/show')]
+        dir_contents = [os.listdir(self.config.watch_directory), os.listdir(self.config.misc_destination_directory),
+                        os.listdir(os.path.join(self.config.movie_destination_directory, 'Alien (1979)')),
+                        os.listdir(os.path.join(self.config.show_destination_directory, 'Stranger Things', 'Season 01'))]
         correct_dir_contents = [[], ['test.mp4'], ['Alien (1979).mp4'], ['Stranger Things - s01e01 -.mp4']]
         self.assertListEqual(dir_contents, correct_dir_contents, 'not all videos were checked')
 
 class DaemonHandlersTestCase(unittest.TestCase):
-
     def setUp(self):
-        os.mkdir(self.config.misc_destination_directory)
-        os.mkdir(self.config.movie_destination_directory)
-        os.mkdir(self.config.show_destination_directory)
-        os.mkdir(self.config.watch_directory)
-        with open(os.path.join(self.config.watch_directory, 'Alien.1979.PROPER.REMASTERED.THEATRICAL.1080p.BluRay.x265-RARBG.mp4')) as file:
-            file.write('test')
-        with open(os.path.join(self.config.watch_directory, 'Stranger.Things.S01E01.1080p.BluRay.x265-RARBG.mp4')) as file:
-            file.write('test')
-        with open(os.path.join(self.config.watch_directory, 'test.mp4')) as file:
-            file.write('test')
         self.logger = logging.getLogger(__name__)
         self.config = plexFormatter.FormatterConfig()
-        self.config.misc_destination_directory = '/daemon_test/misc/'
-        self.config.movie_destination_directory = '/daemon_test/movie/'
-        self.config.show_destination_directory = '/daemon_test/show/'
-        self.config.watch_directory = '/daemon_test/watch/'
+        self.root_folder = os.path.abspath('./daemon_test/')
+        self.config.misc_destination_directory = os.path.join(self.root_folder, 'misc/')
+        self.config.movie_destination_directory = os.path.join(self.root_folder, 'movie/')
+        self.config.show_destination_directory = os.path.join(self.root_folder, 'show/')
+        self.config.watch_directory = os.path.join(self.root_folder, 'watch/')
+        if not os.path.exists(os.path.abspath(self.root_folder)):
+            os.mkdir(os.path.abspath(self.root_folder))
+        if not os.path.exists(self.config.watch_directory):
+            os.mkdir(self.config.watch_directory)
+        if not os.path.exists(self.config.misc_destination_directory):
+            os.mkdir(self.config.misc_destination_directory)
+        if not os.path.exists(self.config.movie_destination_directory):
+            os.mkdir(self.config.movie_destination_directory)
+        if not os.path.exists(self.config.show_destination_directory):
+            os.mkdir(self.config.show_destination_directory)
+        with open(os.path.join(self.config.watch_directory, 'Alien.1979.PROPER.REMASTERED.THEATRICAL.1080p.BluRay.x265-RARBG.mp4'), 'w+') as file:
+            file.write('test')
+        with open(os.path.join(self.config.watch_directory, 'Stranger.Things.S01E01.1080p.BluRay.x265-RARBG.mp4'), 'w+') as file:
+            file.write('test')
+        with open(os.path.join(self.config.watch_directory, 'test.mp4'), 'w+') as file:
+            file.write('test')
         self.formatter = plexFormatter.FileFormatter(self.config, self.logger)
         self.daemon = plexFormatter.Daemon(self.config, self.formatter, self.logger)
         self.daemon.delay_before_moving = 0
@@ -138,21 +156,22 @@ class DaemonHandlersTestCase(unittest.TestCase):
     
     def tearDown(self):
         self.daemon.stop()
-        shutil.rmtree('/daemon_test/')
+        shutil.rmtree(self.root_folder)
     
     def test_on_modified(self):
         self.daemon.add_video(os.path.join(self.config.watch_directory, 'Alien.1979.PROPER.REMASTERED.THEATRICAL.1080p.BluRay.x265-RARBG.mp4'))
         initial_time = self.daemon.videos[0].last_modification
         time.sleep(1)
-        with open(self.daemon.videos[0].src_path) as file:
+        with open(self.daemon.videos[0].src_path, 'w+') as file:
             file.write('testing testing')
-        self.assertEqual(self.daemon.videos[0].last_modified, initial_time, 'failed to detect modified file')
+        self.assertNotEqual(self.daemon.videos[0].last_modification, initial_time, 'failed to detect modified file')
     
     def test_on_created(self):
-        with open(self.config.watch_directory + 'test.mkv', 'w') as file:
+        with open(self.config.watch_directory + 'test.mkv', 'w+') as file:
             file.write('testing testing')
-        with open(self.config.watch_directory + 'test', 'w') as file:
+        with open(self.config.watch_directory + 'test', 'w+') as file:
             file.write('testing testing')
+        time.sleep(1)
         self.assertEqual(len(self.daemon.videos), 1, 'failed to detect new file')
     
     def test_signal_handler(self):
