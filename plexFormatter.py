@@ -25,6 +25,7 @@ class FormatterConfig:
         self.show_destination_directory = '/path/to/destination/'
         self.movie_destination_directory = '/path/to/destination/'
         self.misc_destination_directory = '/path/to/destination/'
+        self.log_level = logging.INFO
 
 # FileFormatter Class
 class FileFormatter:
@@ -207,25 +208,20 @@ class Daemon(FileSystemEventHandler):
         self.logger.info("Daemon stopped.")
 
 # Logger Setup
-def setup_logger() -> logging.Logger:
+def setup_logger(config: FormatterConfig) -> logging.Logger:
     logger = logging.getLogger('FileFormatterDaemon')
-    logger.setLevel(logging.INFO)
-    c_handler = logging.StreamHandler()
-    f_handler = logging.FileHandler('file_formatter.log')
-    c_handler.setLevel(logging.INFO)
-    f_handler.setLevel(logging.INFO)
-    c_format = logging.Formatter('%(asctime)s - %(message)s')
-    f_format = logging.Formatter('%(asctime)s - %(message)s')
-    c_handler.setFormatter(c_format)
-    f_handler.setFormatter(f_format)
-    logger.addHandler(c_handler)
-    logger.addHandler(f_handler)
+    logger.setLevel(config.log_level)
+    log_file_handler = logging.FileHandler('file_formatter.log')
+    log_file_handler.setLevel(config.log_level)
+    log_file_format = logging.Formatter('%(asctime)s - %(message)s')
+    log_file_handler.setFormatter(log_file_format)
+    logger.addHandler(log_file_handler)
     return logger
 
 # Main Execution
 def main():
     config = FormatterConfig()
-    logger = setup_logger()
+    logger = setup_logger(config)
     file_formatter = FileFormatter(config, logger)
     daemon = Daemon(config, file_formatter, logger)
     daemon.start()
