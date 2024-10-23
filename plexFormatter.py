@@ -22,9 +22,10 @@ class FormatterConfig:
             'proper', 'remastered', 'theatrical', 'rarbg'
         ]
         self.watch_directory = '/path/to/watch'
-        self.show_destination_directory = '/path/to/destination/'
-        self.movie_destination_directory = '/path/to/destination/'
-        self.misc_destination_directory = '/path/to/destination/'
+        self.show_destination_directory = '/path/to/destination'
+        self.movie_destination_directory = '/path/to/destination'
+        self.misc_destination_directory = '/path/to/destination'
+        self.non_video_destination_directory = '/path/to/destination'
         self.log_level = logging.INFO
 
 # FileFormatter Class
@@ -36,13 +37,13 @@ class FileFormatter:
     def split_extension(self, filename: str) -> list[str]:
         extension = filename.split('.')[-1]
         if extension == filename:
-            return [filename, None]
+            return [filename, '']
         extension = '.' + extension
         return [filename[:-(len(extension))],  extension]
 
     def is_video(self, filename: str) -> bool:
         extension = self.split_extension(filename)[1]
-        if extension == None:
+        if extension == '':
             return False
         return extension[1:].lower() in self.config.extensions
 
@@ -95,31 +96,33 @@ class FileFormatter:
         return formatted_name + file_extension
     
     def create_destination_path(self, file_name: str) -> str:
-        name_and_extension = self.split_extension(file_name)
-        file_name_no_extension = name_and_extension[0]
-        file_extension = name_and_extension[1]
-        
-        # dest/showname/Season xx/show name - sxx exx.ext
-        episode_info = self.find_episode_info(file_name_no_extension)
-        if episode_info:
-            show_name = file_name_no_extension[:file_name_no_extension.find(episode_info[0])-1].title()
-            return os.path.join(self.config.show_destination_directory,
-                                show_name,
-                                f'Season {episode_info[0][1:]}',
-                                show_name + f' - {episode_info[0]}{episode_info[1]}' + file_extension)
-        
-        # dest/moviename (year)/moviename (year).ext
-        year = self.find_year(file_name_no_extension)
-        if year:
-            movie_name = file_name_no_extension[:file_name_no_extension.find(year)].title() + f'({year})'
-            return os.path.join(self.config.movie_destination_directory,
-                                movie_name,
-                                movie_name + file_extension)
+        if self.is_video(file_name):
+            name_and_extension = self.split_extension(file_name)
+            file_name_no_extension = name_and_extension[0]
+            file_extension = name_and_extension[1]
             
-        return self.config.misc_destination_directory + file_name
+            # dest/showname/Season xx/show name - sxx exx.ext
+            episode_info = self.find_episode_info(file_name_no_extension)
+            if episode_info:
+                show_name = file_name_no_extension[:file_name_no_extension.find(episode_info[0])-1].title()
+                return os.path.join(self.config.show_destination_directory,
+                                    show_name,
+                                    f'Season {episode_info[0][1:]}',
+                                    show_name + f' - {episode_info[0]}{episode_info[1]}' + file_extension)
+            
+            # dest/moviename (year)/moviename (year).ext
+            year = self.find_year(file_name_no_extension)
+            if year:
+                movie_name = file_name_no_extension[:file_name_no_extension.find(year)].title() + f'({year})'
+                return os.path.join(self.config.movie_destination_directory,
+                                    movie_name,
+                                    movie_name + file_extension)
+                
+            return self.config.misc_destination_directory + file_name
+        return self.config.non_video_destination_directory + file_name
     
-# VideoFile Class
-class VideoFile():
+# TrackedFile Class
+class TrackedFile():
     def __init__(self):
         self.last_modification = time.time()
         self.file_name = ''
@@ -133,53 +136,52 @@ class Daemon(FileSystemEventHandler):
         self.file_formatter = file_formatter
         self.logger = logger
         self.observer = Observer()
-        self.videos = []
+        self.tracked_files = []
         self.delay_before_moving = 60
 
     def on_modified(self, event):
         if not event.is_directory:
             self.logger.info(f"Modification detected: {event.src_path}")
-            for video in self.videos:
-                if video.src_path == event.src_path:
-                    video.last_modification = time.time()
+            for file in self.tracked_files:
+                if file.src_path == event.src_path:
+                    file.last_modification = time.time()
                     break
 
     def on_created(self, event):
         if not event.is_directory:
             self.logger.info(f"New file detected: {event.src_path}")
-            if self.file_formatter.is_video(event.src_path):
-                self.add_video(event.src_path)
+            self.add_file(event.src_path)
     
-    def add_video(self, video_path: str):
-        video = VideoFile()
-        video.src_path = video_path
-        video.file_name = self.file_formatter.format_filename(os.path.basename(video_path))
-        video.dest_path = self.file_formatter.create_destination_path(video.file_name)
-        self.videos.append(video)
+    def add_file(self, file_path: str):
+        file = TrackedFile()
+        file.src_path = file_path
+        file.file_name = self.file_formatter.format_filename(os.path.basename(file_path))
+        file.dest_path = self.file_formatter.create_destination_path(file.file_name)
+        self.tracked_files.append(file)
         
-    def find_videos(self, file_path: str):
+    def find_files(self, file_path: str):
         if os.path.exists(file_path):
             if os.path.isfile(file_path):
                 if self.file_formatter.is_video(file_path):
                     self.logger.info(f"Video file found at {file_path}")
-                    self.add_video(file_path)
+                    self.add_file(file_path)
             elif os.path.isdir(file_path):
                 for file in os.listdir(file_path):
-                    self.find_videos(os.path.join(file_path, file))
+                    self.find_files(os.path.join(file_path, file))
         else:
-            self.logger.warning(f"{self.find_videos.__name__}: {file_path} is not a valid path.")
+            self.logger.warning(f"{self.find_files.__name__}: {file_path} is not a valid path.")
 
-    def check_videos(self):
+    def check_tracked_files(self):
         current_time = time.time()
-        for video in self.videos:
-            if current_time - video.last_modification > self.delay_before_moving:
-                self.move_video_file(video)
+        for file in self.tracked_files:
+            if current_time - file.last_modification > self.delay_before_moving:
+                self.move_file(file)
         
-    def move_video_file(self, video: VideoFile):
-        if not os.path.exists(os.path.dirname(video.dest_path)):
-            os.makedirs(os.path.dirname(video.dest_path))
-        shutil.move(video.src_path, video.dest_path)
-        self.logger.info(f"Moved {video.src_path} to {video.dest_path}")
+    def move_file(self, file: TrackedFile):
+        if not os.path.exists(os.path.dirname(file.dest_path)):
+            os.makedirs(os.path.dirname(file.dest_path))
+        shutil.move(file.src_path, file.dest_path)
+        self.logger.info(f"Moved {file.src_path} to {file.dest_path}")
         
     def signal_handler(self, signum, frame):
         signame = signal.Signals(signum).name
@@ -192,11 +194,11 @@ class Daemon(FileSystemEventHandler):
         self.observer.start()
         self.logger.info("Daemon started. Watching directory for changes...")
         signal.signal(signal.SIGTERM, self.signal_handler)
-        self.find_videos(self.config.watch_directory)
+        self.find_files(self.config.watch_directory)
         try:
             while True:
                 time.sleep(1)
-                self.check_videos()
+                self.check_tracked_files()
         except KeyboardInterrupt:
             self.observer.stop()
             self.logger.info("Daemon stopped by user.")
