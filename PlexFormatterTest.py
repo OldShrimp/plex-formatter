@@ -54,7 +54,7 @@ class FileFormatterTestCase(unittest.TestCase):
                         '/movie/Alien (1979)/Alien (1979).mp4',
                         'Failed to create destination path')
         self.assertEqual(self.formatter.create_destination_path('Stranger Things s01e01.mp4'),
-                        '/show/Stranger Things/Season 01/Stranger Things - s01e01 -.mp4',
+                        '/show/Stranger Things/Season 01/Stranger Things - s01e01.mp4',
                         'Failed to create destination path')
         self.assertEqual(self.formatter.create_destination_path('test.mp4'),
                         '/misc/test.mp4',
@@ -110,7 +110,7 @@ class DaemonTestCase(unittest.TestCase):
         dir_contents = [os.listdir(self.config.watch_directory), os.listdir(self.config.misc_destination_directory),
                         os.listdir(os.path.join(self.config.movie_destination_directory, 'Alien (1979)')),
                         os.listdir(os.path.join(self.config.show_destination_directory, 'Stranger Things', 'Season 01'))]
-        correct_dir_contents = [[], ['test.mp4'], ['Alien (1979).mp4'], ['Stranger Things - s01e01 -.mp4']]
+        correct_dir_contents = [[], ['test.mp4'], ['Alien (1979).mp4'], ['Stranger Things - s01e01.mp4']]
         self.assertListEqual(dir_contents, correct_dir_contents, 'failed to move all files correctly')
     
     def test_check_videos(self):
@@ -120,7 +120,7 @@ class DaemonTestCase(unittest.TestCase):
         dir_contents = [os.listdir(self.config.watch_directory), os.listdir(self.config.misc_destination_directory),
                         os.listdir(os.path.join(self.config.movie_destination_directory, 'Alien (1979)')),
                         os.listdir(os.path.join(self.config.show_destination_directory, 'Stranger Things', 'Season 01'))]
-        correct_dir_contents = [[], ['test.mp4'], ['Alien (1979).mp4'], ['Stranger Things - s01e01 -.mp4']]
+        correct_dir_contents = [[], ['test.mp4'], ['Alien (1979).mp4'], ['Stranger Things - s01e01.mp4']]
         self.assertListEqual(dir_contents, correct_dir_contents, 'not all videos were checked')
 
 class DaemonHandlersTestCase(unittest.TestCase):
