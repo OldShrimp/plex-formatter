@@ -162,14 +162,37 @@ class Daemon(FileSystemEventHandler):
     def find_files(self, file_path: str):
         if os.path.exists(file_path):
             if os.path.isfile(file_path):
-                if self.file_formatter.is_video(file_path):
-                    self.logger.info(f"Video file found at {file_path}")
-                    self.add_file(file_path)
+                self.logger.info(f"File found at {file_path}")
+                self.add_file(file_path)
             elif os.path.isdir(file_path):
                 for file in os.listdir(file_path):
                     self.find_files(os.path.join(file_path, file))
         else:
             self.logger.warning(f"{self.find_files.__name__}: {file_path} is not a valid path.")
+
+    def is_empty_directory_tree(self, directory: str):
+        if os.path.exists(directory) and os.path.isdir(directory):
+            subfolders = []
+            for file in os.listdir(directory):
+                file = os.path.join(directory, file)
+                if os.path.isdir(file):
+                    subfolders.append(file)
+                else:
+                    return False
+            result = True
+            for folder in subfolders:
+                result = result and self.is_empty_directory_tree(folder)
+                if result == False: return result
+            return result
+        else:
+            return False
+
+    def find_empty_directories(self, directory):
+        return [os.path.join(directory, dir) for dir in os.listdir(directory) if self.is_empty_directory_tree(os.path.join(directory, dir))]
+
+    def clean_watch_folder(self):
+        for dir in self.find_empty_directories(self.config.watch_directory):
+            shutil.rmtree(dir)
 
     def check_tracked_files(self):
         current_time = time.time()
@@ -199,6 +222,7 @@ class Daemon(FileSystemEventHandler):
             while True:
                 time.sleep(1)
                 self.check_tracked_files()
+                self.clean_watch_folder()
         except KeyboardInterrupt:
             self.observer.stop()
             self.logger.info("Daemon stopped by user.")
