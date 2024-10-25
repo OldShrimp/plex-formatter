@@ -93,6 +93,7 @@ class FileFormatter:
         return replacementchar
     
     def format_filename(self, file_name: str) -> str:
+        if not self.is_video(file_name): return file_name
         name_and_extension = self.split_extension(file_name)
         file_name_no_extension = name_and_extension[0].lower()
         file_extension = name_and_extension[1]
