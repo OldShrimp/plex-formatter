@@ -1,6 +1,7 @@
 import os
 import shutil
 import logging
+import logging.handlers
 import time
 import signal
 from watchdog.observers import Observer
@@ -255,7 +256,7 @@ class Daemon(FileSystemEventHandler):
 def setup_logger(config: FormatterConfig) -> logging.Logger:
     logger = logging.getLogger('FileFormatterDaemon')
     logger.setLevel(config.log_level)
-    log_file_handler = logging.FileHandler(os.path.join(config.log_location, 'file_formatter.log'))
+    log_file_handler = logging.handlers.RotatingFileHandler(os.path.join(config.log_location, 'file_formatter.log'), maxBytes=262144, backupCount=4)
     log_file_handler.setLevel(config.log_level)
     log_file_format = logging.Formatter('%(asctime)s - %(message)s')
     log_file_handler.setFormatter(log_file_format)
