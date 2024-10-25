@@ -90,7 +90,7 @@ class FileFormatter:
         file_name_no_extension = name_and_extension[0].lower()
         file_extension = name_and_extension[1]
         
-        name_parts = [part for part in self.change_symbols(file_name_no_extension, ' ').split(' ')]
+        name_parts = [part for part in self.change_symbols(file_name_no_extension, ' ').split(' ') if part != '']
         first_tag_index = 0
         for part in name_parts:
             if self.is_tag(part):
