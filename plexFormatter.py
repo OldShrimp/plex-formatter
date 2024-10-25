@@ -27,6 +27,7 @@ class FormatterConfig:
         self.misc_destination_directory = '/path/to/destination'
         self.non_video_destination_directory = '/path/to/destination'
         self.log_level = logging.INFO
+        self.log_location = '/path/to/destination'
 
 # FileFormatter Class
 class FileFormatter:
@@ -212,6 +213,14 @@ class Daemon(FileSystemEventHandler):
         self.stop()
 
     def start(self):
+        failed_count = 0
+        if False in [os.path.exists(path) for path in [ self.config.watch_directory, self.config.misc_destination_directory,
+                                                        self.config.movie_destination_directory, self.config.show_destination_directory,
+                                                        self.config.non_video_destination_directory, self.config.log_location]]:
+            self.logger.warn('not all configured paths exist')
+            time.sleep(10)
+            failed_count = failed_count + 1
+            if failed_count > 10: return
         event_handler = self
         self.observer.schedule(event_handler, self.config.watch_directory, recursive=True)
         self.observer.start()
@@ -237,7 +246,7 @@ class Daemon(FileSystemEventHandler):
 def setup_logger(config: FormatterConfig) -> logging.Logger:
     logger = logging.getLogger('FileFormatterDaemon')
     logger.setLevel(config.log_level)
-    log_file_handler = logging.FileHandler('file_formatter.log')
+    log_file_handler = logging.FileHandler(os.path.join(config.log_location, 'file_formatter.log'))
     log_file_handler.setLevel(config.log_level)
     log_file_format = logging.Formatter('%(asctime)s - %(message)s')
     log_file_handler.setFormatter(log_file_format)
