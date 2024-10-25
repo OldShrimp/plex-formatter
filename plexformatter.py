@@ -224,13 +224,15 @@ class Daemon(FileSystemEventHandler):
 
     def start(self):
         failed_count = 0
-        if False in [os.path.exists(path) for path in [ self.config.watch_directory, self.config.misc_destination_directory,
-                                                        self.config.movie_destination_directory, self.config.show_destination_directory,
-                                                        self.config.non_video_destination_directory, self.config.log_location]]:
-            self.logger.warn('not all configured paths exist')
+        missing_paths = [path for path in [self.config.watch_directory, self.config.misc_destination_directory,
+                                     self.config.movie_destination_directory, self.config.show_destination_directory,
+                                     self.config.non_video_destination_directory, self.config.log_location]
+                                    if not os.path.exists(path)]
+        while len(missing_paths) > 0:
+            self.logger.warn(f'cannot find paths: {missing_paths}')
             time.sleep(10)
             failed_count = failed_count + 1
-            if failed_count > 10: return
+            if failed_count > 10: exit(1)
         event_handler = self
         self.observer.schedule(event_handler, self.config.watch_directory, recursive=True)
         self.observer.start()
