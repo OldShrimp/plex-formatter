@@ -77,6 +77,10 @@ class FileFormatterTestCase(unittest.TestCase):
 class DaemonTestCase(unittest.TestCase):
     def setUp(self):
         self.logger = logging.getLogger(__name__)
+        handler = logging.FileHandler(os.path.abspath('./daemontest.log'))
+        handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
+        handler.setLevel(logging.DEBUG)
+        self.logger.addHandler(handler)
         self.config = plexFormatter.FormatterConfig()
         self.root_folder = os.path.abspath('./daemon_test/')
         self.config.misc_destination_directory = os.path.join(self.root_folder, 'misc/')
@@ -126,24 +130,29 @@ class DaemonTestCase(unittest.TestCase):
         for file in self.daemon.tracked_files:
             self.daemon.move_file(file)
         time.sleep(0.01)
-        dir_contents = [os.listdir(self.config.watch_directory),
-                        os.listdir(self.config.misc_destination_directory),
-                        os.listdir(os.path.join(self.config.movie_destination_directory, 'Alien (1979)')),
-                        os.listdir(os.path.join(self.config.show_destination_directory, 'Stranger Things', 'Season 01')),
-                        os.listdir(self.config.non_video_destination_directory)]
+        dir_contents = [os.listdir(path) for path in [self.config.watch_directory,
+                        self.config.misc_destination_directory,
+                        os.path.join(self.config.movie_destination_directory, 'Alien (1979)'),
+                        os.path.join(self.config.show_destination_directory, 'Stranger Things', 'Season 01'),
+                        self.config.non_video_destination_directory]
+                        if os.path.exists(path)]
         correct_dir_contents = [['empty'], ['test.mp4'], ['Alien (1979).mp4'], ['Stranger Things - s01e01.mp4'], ['test']]
         self.assertListEqual(dir_contents, correct_dir_contents, 'failed to move all files correctly')
+        
     
     def test_check_tracked_files(self):
         self.daemon.find_files(self.config.watch_directory)
         time.sleep(0.01)
         self.daemon.check_tracked_files()
-        dir_contents = [os.listdir(self.config.watch_directory), os.listdir(self.config.misc_destination_directory),
-                        os.listdir(os.path.join(self.config.movie_destination_directory, 'Alien (1979)')),
-                        os.listdir(os.path.join(self.config.show_destination_directory, 'Stranger Things', 'Season 01')),
-                        os.listdir(self.config.non_video_destination_directory)]
+        dir_contents = [os.listdir(path) for path in [self.config.watch_directory,
+                        self.config.misc_destination_directory,
+                        os.path.join(self.config.movie_destination_directory, 'Alien (1979)'),
+                        os.path.join(self.config.show_destination_directory, 'Stranger Things', 'Season 01'),
+                        self.config.non_video_destination_directory]
+                        if os.path.exists(path)]
         correct_dir_contents = [['empty'], ['test.mp4'], ['Alien (1979).mp4'], ['Stranger Things - s01e01.mp4'], ['test']]
         self.assertListEqual(dir_contents, correct_dir_contents, 'not all tracked files were checked')
+        self.assertEqual(len(self.daemon.tracked_files), 0)
     
     def test_is_empty_directory_tree(self):
         self.assertTrue(self.daemon.is_empty_directory_tree(os.path.join(self.config.watch_directory, 'empty')))

@@ -142,7 +142,7 @@ class Daemon(FileSystemEventHandler):
 
     def on_modified(self, event):
         if not event.is_directory:
-            self.logger.info(f"Modification detected: {event.src_path}")
+            self.logger.debug(f"Modification detected: {event.src_path}")
             for file in self.tracked_files:
                 if file.src_path == event.src_path:
                     file.last_modification = time.time()
@@ -197,9 +197,13 @@ class Daemon(FileSystemEventHandler):
 
     def check_tracked_files(self):
         current_time = time.time()
+        moved_files = []
         for file in self.tracked_files:
             if current_time - file.last_modification > self.delay_before_moving:
                 self.move_file(file)
+                moved_files.append(file)
+        for file in moved_files:
+            self.tracked_files.remove(file)
         
     def move_file(self, file: TrackedFile):
         if not os.path.exists(os.path.dirname(file.dest_path)):
