@@ -26,6 +26,10 @@ class FileFormatterTestCase(unittest.TestCase):
     def test_is_video(self):
         self.assertTrue(self.formatter.is_video('test.mp4'), 'Correct extension returned False')
         self.assertFalse(self.formatter.is_video('test.exe'), 'Incorrect extension returned True')
+
+    def test_is_deletable(self):
+        self.assertTrue(self.formatter.is_deletable('test.exe'), 'Correct extension returned False')
+        self.assertFalse(self.formatter.is_deletable('test.mp4'), 'Incorrect extension returned True')
     
     def test_is_tag(self):
         self.assertTrue(self.formatter.is_tag('1080p'), 'Matching Word returned False')
@@ -112,6 +116,8 @@ class DaemonTestCase(unittest.TestCase):
             file.write('test')
         with open(os.path.join(self.config.watch_directory, 'test'), 'w+') as file:
             file.write('test')
+        with open(os.path.join(self.config.watch_directory, 'test.txt'), 'w+') as file:
+            file.write('test')
         self.formatter = plexformatter.FileFormatter(self.config, self.logger)
         self.daemon = plexformatter.Daemon(self.config, self.formatter, self.logger)
         self.daemon.delay_before_moving = 0
@@ -122,7 +128,7 @@ class DaemonTestCase(unittest.TestCase):
     def test_find_files(self):
         self.daemon.find_files(self.config.watch_directory)
         found_files = {file.file_name for file in self.daemon.tracked_files}
-        correct_files = {'alien 1979.mp4', 'stranger things s01e01.mp4', 'test.mp4', 'test'}
+        correct_files = {'alien 1979.mp4', 'stranger things s01e01.mp4', 'test.mp4', 'test', 'test.txt'}
         self.assertSetEqual(found_files, correct_files, 'Failed to find files')
     
     def test_move_file(self):
@@ -136,7 +142,7 @@ class DaemonTestCase(unittest.TestCase):
                         os.path.join(self.config.show_destination_directory, 'Stranger Things', 'Season 01'),
                         self.config.non_video_destination_directory]
                         if os.path.exists(path)]
-        correct_dir_contents = [['empty'], ['test.mp4'], ['Alien (1979).mp4'], ['Stranger Things - s01e01.mp4'], ['test']]
+        correct_dir_contents = [['empty'], ['test.mp4'], ['Alien (1979).mp4'], ['Stranger Things - s01e01.mp4'], ['test', 'test.txt']]
         self.assertListEqual(dir_contents, correct_dir_contents, 'failed to move all files correctly')
         
     
@@ -167,6 +173,7 @@ class DaemonTestCase(unittest.TestCase):
         correct_dir_contents = ['test',
                                 'Alien.1979.PROPER.REMASTERED.THEATRICAL.1080p.BluRay.x265-RARBG.mp4',
                                 'Stranger.Things.S01E01.1080p.BluRay.x265-RARBG.mp4',
+                                'test.txt',
                                 'test.mp4']
         self.assertListEqual(os.listdir(self.config.watch_directory), correct_dir_contents, 'failed to clean watch folder')
 

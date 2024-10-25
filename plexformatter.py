@@ -52,7 +52,7 @@ class FileFormatter:
             return False
         return extension.removeprefix('.').lower() in self.config.extensions
 
-    def is_deleteable(self, filename: str) -> bool:
+    def is_deletable(self, filename: str) -> bool:
         extension = self.split_extension(filename)[1]
         return extension.removeprefix('.').lower() in self.config.extensions_to_delete
 
@@ -213,7 +213,7 @@ class Daemon(FileSystemEventHandler):
         to_remove = []
         for file in self.tracked_files:
             if current_time - file.last_modification > self.delay_before_moving:
-                if self.file_formatter.is_deleteable(file.src_path):
+                if self.file_formatter.is_deletable(file.src_path):
                     os.remove(file.src_path)
                     self.logger.info(f'deleted {file.src_path}')
                 else:
