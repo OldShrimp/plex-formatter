@@ -39,8 +39,8 @@ class FileFormatterTestCase(unittest.TestCase):
         self.assertEqual(self.formatter.find_episode_info('test s01 e99'), ['s01', 'e99'], 'Failed to parse episode info')
         self.assertEqual(self.formatter.find_episode_info('test s01'), None, 'Incorrectly returned something other than None')
     
-    def test_remove_symbols(self):
-        self.assertEqual(self.formatter.remove_symbols('    tes>t12+34.?'), 'test1234', 'Failed to remove symbols')
+    def test_change_symbols(self):
+        self.assertEqual(self.formatter.change_symbols('    tes>t12+34.?', ' '), '    tes t12 34  ', 'Failed to remove symbols')
     
     def test_format_filename(self):
         self.assertEqual(self.formatter.format_filename('Alien.1979.PROPER.REMASTERED.THEATRICAL.1080p.BluRay.x265-RARBG.mp4'),
