@@ -16,6 +16,9 @@ class FormatterConfig:
             'ts', '3gp', 'm4v', 'mpg', 'mpeg', 'f4v', 'f4p',
             'f4a', 'f4b'
         ]
+        self.extensions_to_delete = [
+            'txt', 'exe', 'parts'
+        ]
         self.tags = [
             'av1', 'x264', 'hdtv', 'bluray', 'bdrip', 'dvdrip', 'brrip',
             '4k', '2160', '2160p', '1080', '1080p', '720', '720p',
@@ -47,7 +50,11 @@ class FileFormatter:
         extension = self.split_extension(filename)[1]
         if extension == '':
             return False
-        return extension[1:].lower() in self.config.extensions
+        return extension.removeprefix('.').lower() in self.config.extensions
+
+    def is_deleteable(self, filename: str) -> bool:
+        extension = self.split_extension(filename)[1]
+        return extension.removeprefix('.').lower() in self.config.extensions_to_delete
 
     def is_tag(self, word: str) -> bool:
         return word.lower() in self.config.tags
@@ -203,12 +210,16 @@ class Daemon(FileSystemEventHandler):
 
     def check_tracked_files(self):
         current_time = time.time()
-        moved_files = []
+        to_remove = []
         for file in self.tracked_files:
             if current_time - file.last_modification > self.delay_before_moving:
-                self.move_file(file)
-                moved_files.append(file)
-        for file in moved_files:
+                if self.file_formatter.is_deleteable(file.src_path):
+                    os.remove(file.src_path)
+                    self.logger.info(f'deleted {file.src_path}')
+                else:
+                    self.move_file(file)
+                to_remove.append(file)
+        for file in to_remove:
             self.tracked_files.remove(file)
         
     def move_file(self, file: TrackedFile):
