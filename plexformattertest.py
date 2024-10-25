@@ -5,19 +5,19 @@ import os.path
 import shutil
 import time
 import watchdog
-import plexFormatter
+import plexformatter
 
 class FileFormatterTestCase(unittest.TestCase):
     def setUp(self):
         self.logger = logging.getLogger(__name__)
-        self.config = plexFormatter.FormatterConfig()
+        self.config = plexformatter.FormatterConfig()
         self.config.tags.append('tag')
         self.config.misc_destination_directory = '/misc/'
         self.config.movie_destination_directory = '/movie/'
         self.config.show_destination_directory = '/show/'
         self.config.non_video_destination_directory = '/non_video/'
-        self.formatter = plexFormatter.FileFormatter(self.config, self.logger)
-        self.daemon = plexFormatter.Daemon(self.config, self.formatter, self.logger)
+        self.formatter = plexformatter.FileFormatter(self.config, self.logger)
+        self.daemon = plexformatter.Daemon(self.config, self.formatter, self.logger)
 
     def test_split_extension(self):
         self.assertEqual(self.formatter.split_extension('test.ext'), ['test', '.ext'], 'extension split incorrectly')
@@ -81,7 +81,7 @@ class DaemonTestCase(unittest.TestCase):
         handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
         handler.setLevel(logging.DEBUG)
         self.logger.addHandler(handler)
-        self.config = plexFormatter.FormatterConfig()
+        self.config = plexformatter.FormatterConfig()
         self.root_folder = os.path.abspath('./daemon_test/')
         self.config.misc_destination_directory = os.path.join(self.root_folder, 'misc/')
         self.config.movie_destination_directory = os.path.join(self.root_folder, 'movie/')
@@ -112,8 +112,8 @@ class DaemonTestCase(unittest.TestCase):
             file.write('test')
         with open(os.path.join(self.config.watch_directory, 'test'), 'w+') as file:
             file.write('test')
-        self.formatter = plexFormatter.FileFormatter(self.config, self.logger)
-        self.daemon = plexFormatter.Daemon(self.config, self.formatter, self.logger)
+        self.formatter = plexformatter.FileFormatter(self.config, self.logger)
+        self.daemon = plexformatter.Daemon(self.config, self.formatter, self.logger)
         self.daemon.delay_before_moving = 0
     
     def tearDown(self):
@@ -173,7 +173,7 @@ class DaemonTestCase(unittest.TestCase):
 class DaemonHandlersTestCase(unittest.TestCase):
     def setUp(self):
         self.logger = logging.getLogger(__name__)
-        self.config = plexFormatter.FormatterConfig()
+        self.config = plexformatter.FormatterConfig()
         self.root_folder = os.path.abspath('./daemon_test/')
         self.config.misc_destination_directory = os.path.join(self.root_folder, 'misc/')
         self.config.movie_destination_directory = os.path.join(self.root_folder, 'movie/')
@@ -200,8 +200,8 @@ class DaemonHandlersTestCase(unittest.TestCase):
             file.write('test')
         with open(os.path.join(self.watch_nested_directory, 'test2.mp4'), 'w+') as file:
             file.write('test')
-        self.formatter = plexFormatter.FileFormatter(self.config, self.logger)
-        self.daemon = plexFormatter.Daemon(self.config, self.formatter, self.logger)
+        self.formatter = plexformatter.FileFormatter(self.config, self.logger)
+        self.daemon = plexformatter.Daemon(self.config, self.formatter, self.logger)
         self.daemon.delay_before_moving = 0
         self.daemon.observer.schedule(self.daemon, self.config.watch_directory, recursive=True)
         self.daemon.observer.start()
