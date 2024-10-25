@@ -215,7 +215,7 @@ class DaemonHandlersTestCase(unittest.TestCase):
         self.daemon.add_file(os.path.join(self.watch_nested_directory, 'test2.mp4'))
         initial_time_0 = self.daemon.tracked_files[0].last_modification
         initial_time_1 = self.daemon.tracked_files[0].last_modification
-        time.sleep(0.01)
+        time.sleep(0.1)
         with open(self.daemon.tracked_files[0].src_path, 'w+') as file:
             file.write('testing testing')
         with open(self.daemon.tracked_files[1].src_path, 'w+') as file:

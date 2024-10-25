@@ -118,10 +118,10 @@ class FileFormatter:
                 return os.path.join(self.config.movie_destination_directory,
                                     movie_name,
                                     movie_name + file_extension)
-                
-            return self.config.misc_destination_directory + file_name
-        return self.config.non_video_destination_directory + file_name
-    
+            
+            return os.path.join(self.config.misc_destination_directory, file_name)
+        return os.path.join(self.config.non_video_destination_directory, file_name)
+  
 # TrackedFile Class
 class TrackedFile():
     def __init__(self):
@@ -232,7 +232,7 @@ class Daemon(FileSystemEventHandler):
         signal.signal(signal.SIGTERM, self.signal_handler)
         self.find_files(self.config.watch_directory)
         try:
-            while True:
+            while self.observer.is_alive():
                 time.sleep(1)
                 self.check_tracked_files()
                 self.clean_watch_folder()
