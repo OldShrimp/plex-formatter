@@ -25,6 +25,7 @@ class FormatterConfig:
             'webrip', 'amzn', 'h264', 'hevc', 'h', '264' ,'265' ,'h265',
             'proper', 'remastered', 'theatrical', 'rarbg'
         ]
+        self.mode = 'move'
         self.watch_directory = '/path/to/watch'
         self.show_destination_directory = '/path/to/destination'
         self.movie_destination_directory = '/path/to/destination'
@@ -153,6 +154,10 @@ class Daemon(FileSystemEventHandler):
         self.observer = Observer()
         self.tracked_files = []
         self.delay_before_moving = 60
+        self.move_or_copy = shutil.copy2
+        if self.config.mode == 'move':
+            self.move_or_copy = shutil.move
+        
 
     def on_modified(self, event):
         if not event.is_directory:
@@ -218,15 +223,15 @@ class Daemon(FileSystemEventHandler):
                     os.remove(file.src_path)
                     self.logger.info(f'deleted {file.src_path}')
                 else:
-                    self.move_file(file)
+                    self.transfer_file(file)
                 to_remove.append(file)
         for file in to_remove:
             self.tracked_files.remove(file)
         
-    def move_file(self, file: TrackedFile):
+    def transfer_file(self, file: TrackedFile):
         if not os.path.exists(os.path.dirname(file.dest_path)):
             os.makedirs(os.path.dirname(file.dest_path))
-        shutil.move(file.src_path, file.dest_path)
+        self.move_or_copy(file.src_path, file.dest_path)
         self.logger.info(f"Moved {file.src_path} to {file.dest_path}")
         
     def signal_handler(self, signum, frame):

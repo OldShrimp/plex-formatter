@@ -134,7 +134,7 @@ class DaemonTestCase(unittest.TestCase):
     def test_move_file(self):
         self.daemon.find_files(self.config.watch_directory)
         for file in self.daemon.tracked_files:
-            self.daemon.move_file(file)
+            self.daemon.transfer_file(file)
         time.sleep(0.01)
         dir_contents = [os.listdir(path) for path in [self.config.watch_directory,
                         self.config.misc_destination_directory,
