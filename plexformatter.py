@@ -260,7 +260,8 @@ class Daemon(FileSystemEventHandler):
             while self.observer.is_alive():
                 time.sleep(1)
                 self.check_tracked_files()
-                self.clean_watch_folder()
+                if self.config.mode == 'move':
+                    self.clean_watch_folder()
         except KeyboardInterrupt:
             self.observer.stop()
             self.logger.info("Daemon stopped by user.")
