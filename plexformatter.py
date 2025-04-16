@@ -177,7 +177,10 @@ class Daemon(FileSystemEventHandler):
         file.src_path = file_path
         file.file_name = self.file_formatter.format_filename(os.path.basename(file_path))
         file.dest_path = self.file_formatter.create_destination_path(file.file_name)
-        self.tracked_files.append(file)
+        if os.path.exists(file.dest_path):
+            self.logger.info(f'{file.dest_path} already exists. ignoring {file.src_path}.')
+        else:
+            self.tracked_files.append(file)
         
     def find_files(self, file_path: str):
         if os.path.exists(file_path):
@@ -246,7 +249,7 @@ class Daemon(FileSystemEventHandler):
                                      self.config.non_video_destination_directory, self.config.log_location]
                                     if not os.path.exists(path)]
         while len(missing_paths) > 0:
-            self.logger.warn(f'cannot find paths: {missing_paths}')
+            self.logger.warning(f'cannot find paths: {missing_paths}')
             time.sleep(10)
             failed_count = failed_count + 1
             if failed_count > 10: exit(1)
